@@ -9,7 +9,7 @@ export default function App() {
   return (
     <>
       <DotGrid />
-      <main className="relative flex flex-col gap-[clamp(2.5rem,6vh,5.5rem)]" style={{ zIndex: 1 }}>
+      <main className="relative flex flex-col" style={{ zIndex: 1 }}>
         <Hero />
         <WhatIsSentinel />
         <Architecture />

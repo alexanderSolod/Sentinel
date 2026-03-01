@@ -24,7 +24,7 @@ export default function TypeWriter({
           setStarted(true);
         }
       },
-      { threshold: 0.3 }
+      { threshold: 0.05 }
     );
 
     if (ref.current) {

@@ -1,32 +1,32 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg-primary: #050508;
-  --color-bg-secondary: #0A0A0F;
-  --color-bg-tertiary: #0F0F18;
-  --color-bg-hover: #141420;
-  --color-bg-active: #1A1A2E;
+  --color-bg-primary: #0a0a0a;
+  --color-bg-secondary: #111111;
+  --color-bg-tertiary: #161606;
+  --color-bg-hover: #1a1200;
+  --color-bg-active: #221800;
 
-  --color-border-subtle: #1A1A2E;
-  --color-border-default: #2A2A3E;
-  --color-border-strong: #3A3A4E;
+  --color-border-subtle: #2a1800;
+  --color-border-default: #3d2600;
+  --color-border-strong: #553300;
 
-  --color-text-primary: #E8E8F0;
-  --color-text-secondary: #8888A0;
-  --color-text-tertiary: #55556A;
+  --color-text-primary: #ff8c00;
+  --color-text-secondary: #c8a870;
+  --color-text-tertiary: #8a7060;
 
-  --color-accent: #00F0FF;
-  --color-accent-muted: #00F0FF33;
-  --color-accent-bg: #00F0FF0A;
+  --color-accent: #ff8c00;
+  --color-accent-muted: #ff8c0033;
+  --color-accent-bg: #ff8c000a;
 
-  --color-threat-critical: #FF2D55;
-  --color-threat-high: #FF6B2D;
-  --color-threat-medium: #FFB800;
-  --color-threat-low: #34D399;
-  --color-threat-info: #6366F1;
+  --color-threat-critical: #ff2020;
+  --color-threat-high: #ff6600;
+  --color-threat-medium: #ff8c00;
+  --color-threat-low: #33ff33;
+  --color-threat-info: #888888;
 
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
-  --font-display: 'Space Grotesk', 'Inter', sans-serif;
+  --font-mono: 'Courier New', 'SF Mono', monospace;
+  --font-display: 'Courier New', monospace;
 }
 
 * {
@@ -60,8 +60,8 @@ body::after {
     0deg,
     transparent,
     transparent 1px,
-    rgba(0, 0, 0, 0.015) 1px,
-    rgba(0, 0, 0, 0.015) 2px
+    rgba(0, 0, 0, 0.02) 1px,
+    rgba(0, 0, 0, 0.02) 2px
   );
   pointer-events: none;
   z-index: 9999;
@@ -78,7 +78,7 @@ body::after {
 
 ::-webkit-scrollbar-thumb {
   background: var(--color-border-default);
-  border-radius: 3px;
+  border-radius: 0;
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -86,6 +86,6 @@ body::after {
 }
 
 ::selection {
-  background: rgba(0, 240, 255, 0.2);
-  color: #fff;
+  background: rgba(255, 140, 0, 0.25);
+  color: #ff8c00;
 }

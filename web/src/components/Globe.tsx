@@ -24,11 +24,11 @@ export default function Globe() {
       theta: 0.25,
       dark: 1,
       diffuse: 2,
-      mapSamples: 16000,
-      mapBrightness: 4,
-      baseColor: [0.05, 0.05, 0.12],
-      markerColor: [0, 0.94, 1],
-      glowColor: [0, 0.3, 0.4],
+      mapSamples: 24000,
+      mapBrightness: 10,
+      baseColor: [0.06, 0.04, 0],
+      markerColor: [1, 0.55, 0],
+      glowColor: [0.5, 0.2, 0],
       markers: [
         // Geopolitical hotspots
         { location: [38.9072, -77.0369], size: 0.06 },  // Washington DC
@@ -65,7 +65,7 @@ export default function Globe() {
   }, []);
 
   return (
-    <div className="w-full aspect-square max-w-[520px]">
+    <div className="w-full aspect-square">
       <canvas
         ref={canvasRef}
         style={{

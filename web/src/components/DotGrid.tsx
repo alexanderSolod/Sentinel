@@ -49,9 +49,9 @@ export default function DotGrid() {
           const t = Math.max(0, 1 - dist / influenceRadius);
           const size = baseDotSize + (maxDotSize - baseDotSize) * t * t;
 
-          // Color interpolation from subtle gray to cyan
-          const baseR = 26, baseG = 26, baseB = 46; // border-subtle
-          const accentR = 0, accentG = 240, accentB = 255;
+          // Color interpolation from dark amber-black to amber
+          const baseR = 20, baseG = 10, baseB = 0;
+          const accentR = 255, accentG = 140, accentB = 0;
           const cr = Math.round(baseR + (accentR - baseR) * t);
           const cg = Math.round(baseG + (accentG - baseG) * t);
           const cb = Math.round(baseB + (accentB - baseB) * t);

@@ -1,170 +1,70 @@
-import { motion } from 'framer-motion';
 import TypeWriter from './TypeWriter';
-import { Shield, Search, Brain, Users } from 'lucide-react';
+import Globe from './Globe';
 
 const classifications = [
-  {
-    label: 'INSIDER',
-    color: '#FF2D55',
-    desc: 'Trade based on material non-public information',
-    quadrant: 'High BSS / Low PES',
-  },
-  {
-    label: 'OSINT_EDGE',
-    color: '#FF6B2D',
-    desc: 'Superior public intelligence gathering',
-    quadrant: 'Low BSS / High PES',
-  },
-  {
-    label: 'FAST_REACTOR',
-    color: '#FFB800',
-    desc: 'Quick reaction to breaking news',
-    quadrant: 'Low BSS / High PES',
-  },
-  {
-    label: 'SPECULATOR',
-    color: '#34D399',
-    desc: 'Normal speculation, no edge detected',
-    quadrant: 'Low BSS / Low PES',
-  },
+  { label: 'INSIDER',      color: '#ff2020', verdict: 'Flagged: high suspicion.', desc: 'Likely traded on non-public information' },
+  { label: 'OSINT_EDGE',   color: '#33ff33', verdict: 'Flagged: likely clean.',   desc: 'Superior public research — not illegal' },
+  { label: 'FAST_REACTOR', color: '#ff8c00', verdict: 'Flagged: fast mover.',     desc: 'Reacted to breaking news within minutes' },
+  { label: 'SPECULATOR',   color: '#888888', verdict: 'Clean.',                   desc: 'No information edge detected' },
 ];
 
 export default function WhatIsSentinel() {
   return (
-    <section id="what-is-sentinel" className="relative"
-      style={{ padding: 'clamp(8rem, 14vh, 12rem) clamp(2rem, 5vw, 6rem)' }}
+    <section id="what-is-sentinel" className="relative overflow-hidden"
+      style={{ padding: 'clamp(4rem, 8vh, 6rem) clamp(2rem, 5vw, 6rem)' }}
     >
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] max-w-4xl h-[1px] bg-gradient-to-r from-transparent via-border-default to-transparent" />
+
+      {/* Globe — large, absolute right */}
+      <div className="absolute top-1/2 -translate-y-1/2 right-0 pointer-events-none" style={{ width: '50vw' }}>
+        <Globe />
+      </div>
+
+      {/* Text — left column */}
       <div className="relative z-10 w-full max-w-[1200px] mx-auto">
-        {/* Section label */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-100px' }}
-          transition={{ duration: 0.6 }}
-        >
-          <span
-            className="text-xs font-semibold tracking-[0.15em] uppercase text-accent"
-            style={{ fontFamily: 'var(--font-mono)' }}
-          >
+        <div style={{ maxWidth: '52%' }}>
+
+          <span className="text-xs font-bold tracking-[0.15em] uppercase text-accent" style={{ fontFamily: 'var(--font-mono)' }}>
             // What is Sentinel
           </span>
           <div className="mt-3 w-20 h-[1px] bg-accent/40" />
-        </motion.div>
 
-        {/* Typed heading — BIG */}
-        <div className="mt-12">
-          <TypeWriter
-            text="We combine OSINT data with state-of-the-art AI methods to flag potential insider trading on prediction markets."
-            speed={25}
-            tag="h2"
-            className="text-3xl md:text-4xl lg:text-5xl font-bold leading-[1.2] text-text-primary max-w-[900px]"
-          />
-        </div>
+          <div className="mt-10">
+            <TypeWriter
+              text="We flag what everyone else buries."
+              speed={40}
+              tag="h2"
+              className="text-[clamp(3rem,5.5vw,4.5rem)] font-bold leading-[1.1] text-text-primary"
+            />
+          </div>
 
-        {/* Description */}
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-80px' }}
-          transition={{ duration: 0.6, delay: 0.2 }}
-          className="mt-14 text-base md:text-lg text-text-secondary max-w-[700px] leading-[1.8]"
-          style={{ fontFamily: 'var(--font-mono)' }}
-        >
-          Prediction markets are becoming the world's real-time truth layer. But nobody is watching
-          the watchers. Nobody can tell the difference between someone with classified intel and
-          someone who just reads flight-tracking data better than you. Sentinel changes that.
-        </motion.p>
+          <p className="mt-8 text-base text-text-secondary leading-[1.9]" style={{ fontFamily: 'var(--font-mono)' }}>
+            $9B in prediction market trading volume. Compliance teams watch it. Regulators watch it. Nobody publishes what they find.
+          </p>
 
-        {/* Feature highlights */}
-        <div className="mt-28 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[
-            { icon: Shield, title: 'Real-Time Detection', desc: 'Continuous monitoring of Polymarket for volume spikes and price dislocations' },
-            { icon: Search, title: 'OSINT Correlation', desc: 'Cross-references trades with GDELT, GDACS, ACLED, and NASA FIRMS data' },
-            { icon: Brain, title: 'AI Classification', desc: '3-stage pipeline: fast triage, deep reasoning, and SAR generation' },
-            { icon: Users, title: 'Human-in-the-Loop', desc: 'Arena voting system for crowd-validated ground truth' },
-          ].map((item, i) => (
-            <motion.div
-              key={item.title}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: '-50px' }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
-              className="group p-7 rounded-xl border border-border-subtle bg-bg-secondary/60
-                         hover:border-border-default hover:bg-bg-hover transition-all duration-300"
-            >
-              <item.icon className="w-6 h-6 text-accent mb-5" strokeWidth={1.5} />
-              <h3
-                className="text-base font-semibold text-text-primary mb-3"
-                style={{ fontFamily: 'var(--font-display)' }}
-              >
-                {item.title}
-              </h3>
-              <p
-                className="text-sm text-text-secondary leading-[1.7]"
-                style={{ fontFamily: 'var(--font-mono)' }}
-              >
-                {item.desc}
-              </p>
-            </motion.div>
-          ))}
-        </div>
+          <p className="mt-6 text-base text-text-secondary leading-[1.9]" style={{ fontFamily: 'var(--font-mono)' }}>
+            We do.
+          </p>
 
-        {/* Classification grid */}
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: '-80px' }}
-          transition={{ duration: 0.7, delay: 0.2 }}
-          className="mt-36"
-        >
-          <span
-            className="text-xs font-semibold tracking-[0.15em] uppercase text-text-secondary"
-            style={{ fontFamily: 'var(--font-mono)' }}
-          >
-            Four Classification Types
-          </span>
-
-          <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-5">
+          <div className="mt-12 space-y-0">
             {classifications.map((cls) => (
-              <div
-                key={cls.label}
-                className="flex items-start gap-5 p-6 rounded-xl border border-border-subtle bg-bg-secondary/40
-                           hover:border-border-default transition-all duration-200"
-              >
-                <div className="flex-shrink-0 mt-1">
-                  <span
-                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider"
-                    style={{
-                      color: cls.color,
-                      backgroundColor: `${cls.color}0F`,
-                      fontFamily: 'var(--font-mono)',
-                    }}
-                  >
-                    <span
-                      className="w-2 h-2 rounded-full"
-                      style={{ backgroundColor: cls.color }}
-                    />
-                    {cls.label}
-                  </span>
-                </div>
-                <div>
-                  <p
-                    className="text-base text-text-primary leading-[1.6]"
-                    style={{ fontFamily: 'var(--font-mono)' }}
-                  >
-                    {cls.desc}
-                  </p>
-                  <p
-                    className="mt-2 text-xs text-text-tertiary"
-                    style={{ fontFamily: 'var(--font-mono)' }}
-                  >
-                    {cls.quadrant}
-                  </p>
-                </div>
+              <div key={cls.label} className="flex items-baseline gap-5 py-4 border-b border-border-subtle">
+                <span className="text-xs font-bold uppercase tracking-wider w-28 flex-shrink-0"
+                  style={{ color: cls.color, fontFamily: 'var(--font-mono)' }}>
+                  {cls.label}
+                </span>
+                <span className="text-sm font-bold flex-shrink-0"
+                  style={{ color: cls.color, fontFamily: 'var(--font-mono)' }}>
+                  {cls.verdict}
+                </span>
+                <span className="text-sm text-text-tertiary hidden sm:block" style={{ fontFamily: 'var(--font-mono)' }}>
+                  {cls.desc}
+                </span>
               </div>
             ))}
           </div>
-        </motion.div>
+
+        </div>
       </div>
     </section>
   );
