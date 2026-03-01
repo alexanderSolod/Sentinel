@@ -12,6 +12,7 @@ import uuid
 from typing import Any, Dict, List, Literal, Optional
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Security
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
@@ -67,6 +68,14 @@ app = FastAPI(
     description="Live evidence correlation and case intelligence API",
     version="0.2.0",
     lifespan=_lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:3000"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 

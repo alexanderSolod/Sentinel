@@ -59,7 +59,7 @@ class EvidenceCorrelator:
         self.classifier = classifier_pipeline or SentinelPipeline(
             api_key=api_key,
             db_path=db_path,
-            skip_low_suspicion=False,
+            skip_low_suspicion=True,
         )
         self.streaming_detector = StreamingAnomalyDetector()
         self.fusion_engine = DataFusionEngine(window_hours=72)

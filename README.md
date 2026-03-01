@@ -118,40 +118,6 @@ Trade at 2:00 AM ──────── 8 hours ──────── News 
 
 - **W&B Weave Observability** — Full tracing on all 3 AI pipeline stages for decision auditability.
 
-## Quick Start
-
-```bash
-# Clone and install
-git clone <repo-url> && cd mistral-monitor
-pip install -r requirements.txt
-
-# Configure
-cp ../.env.template .env
-# Edit .env → add MISTRAL_API_KEY (required)
-# Optional: WANDB_API_KEY, ACLED_ACCESS_TOKEN, NASA_FIRMS_API_KEY
-
-# Initialize database with demo data
-python main.py init
-
-# Launch dashboard
-python main.py dashboard
-```
-
-Open [http://localhost:8501](http://localhost:8501) and explore the 5-page dashboard.
-
-### Run the AI Pipeline
-
-```bash
-# Mock data (no external APIs needed except Mistral)
-python main.py pipeline --mock
-
-# Live Polymarket data + real OSINT
-python main.py pipeline --live
-
-# Real-time trade monitoring
-python main.py monitor --mock 20
-```
-
 ## The Four Classifications
 
 Sentinel classifies every flagged trade into one of four categories using a dual-score system:
@@ -168,68 +134,293 @@ Sentinel classifies every flagged trade into one of four categories using a dual
 
 The 2x2 grid of BSS vs PES is the key visualization — INSIDER cases cluster in the high-BSS, low-PES quadrant.
 
-## Dashboard Pages
+---
 
-### 1. Live Monitor
-Real-time anomaly feed with classification badges, gate funnel visualization, and evidence packet summaries.
+## Getting Started
 
-### 2. Case Detail
-**The money shot.** Temporal gap timeline showing:
-- Red diamond: The suspicious trade
-- Green circles: OSINT signals (news, reports, alerts)
-- Orange star: Major news break
-- Red shaded zone: The information gap (no public info existed)
+### Prerequisites
 
-Plus: 2x2 classification grid, Fraud Triangle breakdown, full XAI narrative, and SAR report.
+- Python 3.11+
+- Node.js 18+ and npm (for the dashboard UI)
+- A [Mistral AI API key](https://console.mistral.ai/)
 
-### 3. Sentinel Index
-Searchable database of all flagged cases with filtering by classification, severity, and market. Export to CSV.
+### Installation
 
-### 4. Arena
-Vote on AI classifications. Agree, disagree, or flag as uncertain. Consensus scores drive evaluation metrics.
+```bash
+# Clone the repository
+git clone <repo-url> && cd mistral-monitor
 
-### 5. System Health
-Model drift tracking, gate throughput analysis, NLP relevance heatmap, and pipeline performance stats.
+# Install Python dependencies
+pip install -r requirements.txt
 
-## Commands Reference
+# Install dashboard UI dependencies
+cd ui && npm install && cd ..
+
+# Configure environment variables
+cp .env.template .env
+# Edit .env and add your MISTRAL_API_KEY (required)
+```
+
+### Environment Variables
+
+| Variable | Required | Purpose |
+|----------|----------|---------|
+| `MISTRAL_API_KEY` | **Yes** | Powers all 4 AI models (classification, embedding) |
+| `ACLED_ACCESS_TOKEN` | No | Armed conflict OSINT data (free, [register here](https://acleddata.com/)) |
+| `NASA_FIRMS_API_KEY` | No | Fire/thermal detection OSINT ([register here](https://firms.modaps.eosdis.nasa.gov/)) |
+| `WANDB_API_KEY` | No | W&B Weave tracing for AI pipeline observability |
+| `SENTINEL_FINETUNED_MODEL` | No | Use a fine-tuned Mistral model for Stage 1 triage |
+| `SENTINEL_API_KEY` | No | Protect the vote endpoint (if unset, runs in open demo mode) |
+| `DATABASE_PATH` | No | Custom SQLite database path (default: `./data/sentinel.db`) |
+
+---
+
+## Running the Project
+
+### Quick Demo (Fastest Way to See Everything)
+
+```bash
+# 1. Seed the database with demo data
+python main.py init
+
+# 2. Start the API server (keep running in background)
+python main.py api
+
+# 3. In a new terminal, start the dashboard
+cd ui && npm run dev
+```
+
+Open **http://localhost:5173** to see the dashboard with pre-seeded demo data.
+
+### Running with Live Data
+
+There are two ways to populate the dashboard with real data from Polymarket:
+
+#### Option A: Pipeline Mode (One-Shot Analysis)
+
+Best for: Getting 5 fully classified cases with SAR reports quickly.
+
+```bash
+# Terminal 1: API server
+python main.py api
+
+# Terminal 2: Dashboard
+cd ui && npm run dev
+
+# Terminal 3: Run the live pipeline
+python main.py pipeline --live
+```
+
+This fetches the top 20 Polymarket markets by volume, gathers OSINT from all sources (RSS, GDELT, GDACS, ACLED, NASA FIRMS), correlates the top 5 markets with intelligence signals, and classifies each through the 3-stage AI pipeline. Results are saved to the database and appear in the dashboard on page refresh.
+
+#### Option B: Monitor Mode (Continuous Real-Time Stream)
+
+Best for: Watching trades flow in continuously.
+
+```bash
+# Terminal 1: API server
+python main.py api
+
+# Terminal 2: Dashboard
+cd ui && npm run dev
+
+# Terminal 3: Live trade stream
+python main.py monitor --live
+```
+
+This connects to Polymarket's WebSocket and processes each trade through the full enrichment pipeline (wallet profiling, cluster analysis, OSINT correlation, AI classification). Press Ctrl+C to stop. Evidence packets appear in the dashboard's Live Monitor page.
+
+### Running with Mock Data (No External APIs Needed)
+
+For development, demos, or when you don't want to hit external APIs:
+
+```bash
+# Mock pipeline: 4 synthetic anomalies through full classification
+python main.py pipeline --mock
+
+# Mock monitor: N mock trades with 0.25s delay each
+python main.py monitor --mock        # 20 trades (default)
+python main.py monitor --mock 50     # 50 trades
+python main.py monitor --mock 200    # 200 trades
+```
+
+Both mock modes still require `MISTRAL_API_KEY` since they run through the AI classification pipeline.
+
+---
+
+## All Commands
+
+### Core Commands
+
+| Command | Description | Requires |
+|---------|-------------|----------|
+| `python main.py init` | Initialize SQLite database and seed with demo data | Nothing |
+| `python main.py api` | Start FastAPI server on http://localhost:8000 | Nothing |
+| `python main.py metrics` | Print evaluation metrics (FPR/FNR/confusion matrix/consensus) | Seeded DB |
+
+### Pipeline Commands
+
+| Command | Description | Requires |
+|---------|-------------|----------|
+| `python main.py pipeline --mock` | Process 4 synthetic anomalies through the full pipeline | `MISTRAL_API_KEY` |
+| `python main.py pipeline --live` | Fetch live Polymarket markets, gather OSINT, classify top 5 | `MISTRAL_API_KEY` |
+| `python main.py pipeline --backfill` | Reprocess the last 100 DB anomalies through the classifier | `MISTRAL_API_KEY` |
+
+### Monitor Commands
+
+| Command | Description | Requires |
+|---------|-------------|----------|
+| `python main.py monitor --mock` | Generate 20 mock trades through real-time pipeline | `MISTRAL_API_KEY` |
+| `python main.py monitor --mock N` | Generate N mock trades (e.g., `--mock 100`) | `MISTRAL_API_KEY` |
+| `python main.py monitor --live` | Connect to Polymarket WebSocket, process live trades (Ctrl+C to stop) | `MISTRAL_API_KEY` |
+
+### Dashboard Commands
+
+| Command | Description | URL |
+|---------|-------------|-----|
+| `cd ui && npm run dev` | Start React dashboard (development mode with hot reload) | http://localhost:5173 |
+| `cd ui && npm run build` | Build production bundle to `ui/dist/` | — |
+| `cd ui && npm run preview` | Preview production build locally | http://localhost:4173 |
+| `python main.py dashboard` | Start legacy Streamlit dashboard | http://localhost:8501 |
+
+### Classification Pipeline Commands
 
 | Command | Description |
 |---------|-------------|
-| `python main.py init` | Initialize database + seed demo data |
-| `python main.py dashboard` | Launch Streamlit dashboard |
-| `python main.py pipeline --mock` | Run pipeline with synthetic data |
-| `python main.py pipeline --live` | Run pipeline with live Polymarket data |
-| `python main.py pipeline --backfill` | Reprocess existing DB anomalies |
-| `python main.py monitor --mock [n]` | Process n mock trades in real-time |
-| `python main.py monitor --live` | WebSocket stream from Polymarket |
-| `python main.py api` | Launch FastAPI backend (port 8000) |
-| `python main.py metrics` | Print evaluation metrics |
-| `python -m src.classification.pipeline` | Test classification pipeline directly |
-| `python -m src.classification.finetuning --generate-only` | Generate fine-tuning training data |
+| `python -m src.classification.pipeline` | Test classification pipeline on sample data |
+| `python -m src.classification.finetuning --generate-only` | Generate 500 training examples for fine-tuning |
+| `python -m src.classification.finetuning` | Submit fine-tuning job to Mistral API |
+| `python -m src.classification.finetuning --check-job <id>` | Check fine-tuning job status |
+
+### Module Test Commands
+
+| Command | Description |
+|---------|-------------|
+| `python -m src.data.polymarket_client` | Test Polymarket API connection |
+| `python -m src.detection.anomaly_detector` | Test anomaly detection module |
+| `python -m src.osint.sources` | Test OSINT source integrations |
+| `python -m src.osint.vector_store` | Test ChromaDB vector store |
+| `python -m src.osint.correlator` | Test market-OSINT correlation |
+
+---
+
+## Dashboard Pages
+
+The React dashboard (`ui/`) provides 5 pages accessible from the sidebar:
+
+### 1. Live Monitor (`/`)
+Real-time anomaly feed with KPI cards (active anomalies, insider cases, cases under review, evidence packets, total cases), a scrollable anomaly list with classification badges and BSS/PES score bars, and an evidence packets table with correlation scores.
+
+### 2. Case Detail (`/case/:caseId`)
+**The money shot.** Deep-dive into a single case with:
+- **Temporal Gap Chart** (hero visualization) — horizontal timeline showing trade timing vs. OSINT signals, with suspicious gaps shaded red
+- **Wallet Profile** — address, age, trade count, win rate, risk score
+- **Classification Quadrant** — BSS vs PES scatter plot with four colored quadrants
+- **AI Analysis** — XAI narrative, RF analysis, game theory scores
+- **Fraud Triangle** — Pressure, Opportunity, Rationalization breakdown
+- **OSINT Signals** — Related intelligence events with timestamps
+- **SAR Report** — Collapsible Suspicious Activity Report
+
+### 3. Sentinel Index (`/index`)
+Searchable database of all flagged cases. Filter by classification, status, or market name. Sortable columns for Case ID, Market, Classification, BSS, PES, Consensus, Status, and Created date. Includes pagination and CSV export.
+
+### 4. Arena (`/arena`)
+Human-in-the-loop voting interface. Review AI classifications and vote Agree, Disagree, or Uncertain. See the consensus donut chart and total vote count. Consensus scores feed back into evaluation metrics.
+
+### 5. System Health (`/health`)
+System status dashboard with connection indicators, database statistics, classification distribution pie chart, evaluation metrics (FPR, FNR, accuracy, confusion matrix), and case status summary.
+
+---
+
+## API Endpoints
+
+The FastAPI server (port 8000) provides these endpoints:
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/api/health` | System health check with database stats |
+| `GET` | `/api/metrics` | Evaluation metrics (FPR/FNR/confusion matrix) |
+| `GET` | `/api/anomalies` | List/filter anomalies (supports `classification`, `market_id`, `wallet_address`, `min_bss`, `max_bss`, `min_confidence`, `limit`, `offset`) |
+| `GET` | `/api/cases/{case_id}` | Full case details with anomaly, evidence packet, and votes |
+| `GET` | `/api/index` | Query Sentinel Index (supports `classification`, `status`, `search`, `min_bss`, `min_consensus`, `limit`, `offset`) |
+| `GET` | `/api/evidence` | List evidence packets with pagination |
+| `GET` | `/api/evidence/{case_id}` | Get evidence packet for a specific case |
+| `POST` | `/api/vote` | Submit an Arena vote (requires API key if `SENTINEL_API_KEY` is set) |
+
+---
+
+## Fine-Tuning Pipeline
+
+Sentinel includes a complete fine-tuning pipeline for creating a custom Mistral classifier:
+
+```bash
+# Generate 500 training examples
+# Distribution: 25% INSIDER, 25% OSINT_EDGE, 15% FAST_REACTOR, 15% SPECULATOR, 20% Hard/Ambiguous
+python -m src.classification.finetuning --generate-only
+
+# Submit fine-tuning job (requires Mistral fine-tuning access)
+python -m src.classification.finetuning
+
+# Check job status
+python -m src.classification.finetuning --check-job <job-id>
+
+# Deploy: set SENTINEL_FINETUNED_MODEL=<model_id> in .env
+```
+
+Training data includes 3 gold-standard examples from real events and 497 synthetic examples with controlled difficulty distribution.
+
+## Gold-Standard Cases
+
+These real, documented events are embedded in Sentinel's training data:
+
+| Case | Wallet | Classification | Evidence |
+|------|--------|---------------|----------|
+| **Iran Strike (Jan 2024)** | Wallet A — 3-day-old, $60K, 6-wallet cluster | INSIDER (BSS: 94) | Trade 8h before news, zero public signals, 812% return |
+| **Iran Strike (Jan 2024)** | Vivaldi007 — 120-day-old, 47 trades, 62% win rate | OSINT_EDGE (BSS: 12) | Multiple public signals existed: satellite imagery, diplomatic breakdown, analyst commentary |
+| **Axiom/ZachXBT (2024)** | predictorxyz — 5-day-old, $65.8K at 13.8% odds | INSIDER (BSS: 91) | No public signals pointed to Axiom specifically. Confirmed by ZachXBT. 625% return |
+
+---
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
-| AI Classification | Mistral Small, Mistral Large, Mistral Embed |
-| Vector Search | ChromaDB with Mistral Embed |
-| ML Detection | scikit-learn (Random Forest, DBSCAN, PCA) |
-| Anomaly Detection | Custom autoencoder (PyTorch-style, numpy impl) |
-| Dashboard | Streamlit + Plotly |
-| API | FastAPI + Uvicorn |
-| Database | SQLite with WAL mode |
-| OSINT Sources | RSS, GDELT, GDACS, ACLED, NASA FIRMS |
-| Observability | W&B Weave |
-| Data | Polymarket CLOB API + WebSocket |
+| **Dashboard** | React 19, TypeScript, Tailwind CSS 4, Framer Motion, Recharts, Vite |
+| **API** | FastAPI, Uvicorn |
+| **AI Classification** | Mistral Small, Mistral Large, Mistral Embed |
+| **Vector Search** | ChromaDB with Mistral Embed |
+| **ML Detection** | scikit-learn (Random Forest, DBSCAN, PCA) |
+| **Anomaly Detection** | Custom autoencoder (numpy implementation) |
+| **Database** | SQLite with WAL mode |
+| **OSINT Sources** | RSS feeds, GDELT, GDACS, ACLED, NASA FIRMS |
+| **Observability** | W&B Weave |
+| **Data** | Polymarket CLOB API + WebSocket |
 
 ## Project Structure
 
 ```
 mistral-monitor/
-├── main.py                          # CLI entry point (7 commands)
-├── run_dashboard.py                 # Streamlit launcher
-├── requirements.txt
+├── main.py                          # CLI entry point (8 commands)
+├── requirements.txt                 # Python dependencies
+├── ui/                              # React dashboard (Bloomberg terminal-style)
+│   ├── package.json
+│   ├── vite.config.ts               # Vite + API proxy to FastAPI
+│   ├── src/
+│   │   ├── App.tsx                  # Router setup (5 routes)
+│   │   ├── index.css                # Design tokens (colors, fonts, scanlines)
+│   │   ├── api/                     # API client, TypeScript types, React hooks
+│   │   ├── pages/                   # LiveMonitor, CaseDetail, SentinelIndex, Arena, SystemHealth
+│   │   ├── components/
+│   │   │   ├── layout/              # Sidebar, DashboardLayout
+│   │   │   ├── ui/                  # Card, ClassificationBadge, ScoreBar, StatusBadge, WalletAddress
+│   │   │   ├── charts/              # TemporalGapChart, ClassificationQuadrant, VoteDonut
+│   │   │   └── effects/             # DotGrid (interactive canvas background)
+│   │   └── lib/                     # Constants, formatters
+│   └── dist/                        # Production build output
+├── web/                             # Landing page (Vercel deployment)
 ├── src/
+│   ├── api/
+│   │   └── main.py                  # FastAPI REST endpoints (8 routes)
 │   ├── classification/
 │   │   ├── stage1_triage.py         # Mistral Small — 4-class classifier
 │   │   ├── stage2_magistral.py      # Mistral Large — Fraud Triangle + XAI
@@ -259,61 +450,12 @@ mistral-monitor/
 │   │   ├── polymarket_client.py     # Polymarket API + rate limiting
 │   │   ├── websocket_handler.py     # Real-time trade WebSocket
 │   │   └── mock_data.py             # Demo data generator
-│   ├── dashboard/
-│   │   └── app.py                   # 5-page Streamlit app (932 lines)
-│   └── api/
-│       └── main.py                  # FastAPI REST endpoints
-├── data/
-│   ├── sentinel.db                  # SQLite database
-│   └── finetuning/                  # Generated training data
-└── tests/                           # 13 test modules
+│   └── dashboard/
+│       └── app.py                   # Legacy Streamlit dashboard
+└── data/
+    ├── sentinel.db                  # SQLite database
+    └── finetuning/                  # Generated training data
 ```
-
-## Gold-Standard Cases
-
-These real, documented events are embedded in Sentinel's training data:
-
-| Case | Wallet | Classification | Evidence |
-|------|--------|---------------|----------|
-| **Iran Strike (Jan 2024)** | Wallet A — 3-day-old, $60K, 6-wallet cluster | INSIDER (BSS: 94) | Trade 8h before news, zero public signals, 812% return |
-| **Iran Strike (Jan 2024)** | Vivaldi007 — 120-day-old, 47 trades, 62% win rate | OSINT_EDGE (BSS: 12) | Multiple public signals existed: satellite imagery, diplomatic breakdown, analyst commentary |
-| **Axiom/ZachXBT (2024)** | predictorxyz — 5-day-old, $65.8K at 13.8% odds | INSIDER (BSS: 91) | No public signals pointed to Axiom specifically. Confirmed by ZachXBT. 625% return |
-
-## Fine-Tuning Pipeline
-
-Sentinel includes a complete fine-tuning pipeline for creating a custom Mistral classifier:
-
-```bash
-# Generate 500 training examples (25% INSIDER, 25% OSINT_EDGE, 15% FAST_REACTOR, 15% SPECULATOR, 20% Hard)
-python -m src.classification.finetuning --generate-only
-
-# Submit fine-tuning job (requires Mistral fine-tuning access)
-python -m src.classification.finetuning
-
-# Deploy: set SENTINEL_FINETUNED_MODEL=<model_id> in .env
-```
-
-Training data includes 3 gold-standard examples from real events and 497 synthetic examples with controlled difficulty distribution.
-
-## API Endpoints
-
-```
-GET  /api/anomalies          List/filter anomalies
-GET  /api/cases/{id}         Get case details + evidence
-GET  /api/index              Query Sentinel Index
-POST /api/vote               Submit Arena vote
-GET  /api/health             System health check
-```
-
-## Environment Variables
-
-| Variable | Required | Purpose |
-|----------|----------|---------|
-| `MISTRAL_API_KEY` | Yes | Powers all 4 AI models |
-| `WANDB_API_KEY` | No | W&B Weave tracing |
-| `ACLED_ACCESS_TOKEN` | No | Armed conflict OSINT |
-| `NASA_FIRMS_API_KEY` | No | Fire detection OSINT |
-| `SENTINEL_FINETUNED_MODEL` | No | Use fine-tuned classifier |
 
 ## Attribution
 

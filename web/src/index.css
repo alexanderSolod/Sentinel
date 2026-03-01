@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg-primary: #050508;
+  --color-bg-secondary: #0A0A0F;
+  --color-bg-tertiary: #0F0F18;
+  --color-bg-hover: #141420;
+  --color-bg-active: #1A1A2E;
+
+  --color-border-subtle: #1A1A2E;
+  --color-border-default: #2A2A3E;
+  --color-border-strong: #3A3A4E;
+
+  --color-text-primary: #E8E8F0;
+  --color-text-secondary: #8888A0;
+  --color-text-tertiary: #55556A;
+
+  --color-accent: #00F0FF;
+  --color-accent-muted: #00F0FF33;
+  --color-accent-bg: #00F0FF0A;
+
+  --color-threat-critical: #FF2D55;
+  --color-threat-high: #FF6B2D;
+  --color-threat-medium: #FFB800;
+  --color-threat-low: #34D399;
+  --color-threat-info: #6366F1;
+
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-display: 'Space Grotesk', 'Inter', sans-serif;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-mono);
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+/* Scanline overlay */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 1px,
+    rgba(0, 0, 0, 0.015) 1px,
+    rgba(0, 0, 0, 0.015) 2px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-default);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-strong);
+}
+
+::selection {
+  background: rgba(0, 240, 255, 0.2);
+  color: #fff;
+}
