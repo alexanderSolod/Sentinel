@@ -29,7 +29,7 @@ import WalletAddress from '../components/ui/WalletAddress.tsx';
 import Skeleton from '../components/ui/Skeleton.tsx';
 import TemporalGapChart from '../components/charts/TemporalGapChart.tsx';
 import ClassificationQuadrant from '../components/charts/ClassificationQuadrant.tsx';
-import { formatNumber, formatPercent } from '../lib/formatters.ts';
+import { formatNumber, formatPercent, formatRelativeTime } from '../lib/formatters.ts';
 
 export default function CaseDetail() {
   const { caseId } = useParams<{ caseId: string }>();
@@ -94,7 +94,7 @@ export default function CaseDetail() {
 
   if (!data) return null;
 
-  const { case: sentinelCase, anomaly, evidence_packet } = data;
+  const { case: sentinelCase, anomaly, evidence_packet, osint_events } = data;
   const evidence: EvidenceJson | null = sentinelCase.evidence ?? null;
 
   return (
@@ -213,6 +213,72 @@ export default function CaseDetail() {
               )}
             </div>
           </div>
+        ) : evidence?.wallet_address ? (
+          <div className="space-y-4">
+            <WalletAddress address={evidence.wallet_address} />
+
+            <div className="grid grid-cols-2 gap-3">
+              <StatItem
+                icon={<Clock size={14} />}
+                label="Age"
+                value={
+                  evidence.wallet_age_days != null
+                    ? `${Number(evidence.wallet_age_days)}d`
+                    : '--'
+                }
+              />
+              <StatItem
+                icon={<Hash size={14} />}
+                label="Trades"
+                value={evidence.wallet_trades != null ? formatNumber(evidence.wallet_trades) : '--'}
+              />
+              <StatItem
+                icon={<Trophy size={14} />}
+                label="Trade Size"
+                value={
+                  evidence.trade_size_usd != null
+                    ? `$${formatNumber(evidence.trade_size_usd)}`
+                    : '--'
+                }
+              />
+              <StatItem
+                icon={<AlertTriangle size={14} />}
+                label="Z-Score"
+                value={
+                  evidence.z_score != null
+                    ? Number(evidence.z_score).toFixed(1)
+                    : '--'
+                }
+              />
+            </div>
+
+            {/* Price impact */}
+            {evidence.price_before != null && evidence.price_after != null && (
+              <div className="pt-2 border-t border-border-subtle">
+                <div className="font-mono text-[10px] text-text-tertiary mb-1">Price Impact</div>
+                <div className="flex items-center gap-2 font-mono text-xs">
+                  <span className="text-text-secondary">{Number(evidence.price_before).toFixed(2)}</span>
+                  <span className="text-text-tertiary">&rarr;</span>
+                  <span className="text-text-primary font-semibold">{Number(evidence.price_after).toFixed(2)}</span>
+                  <span
+                    className="ml-auto font-semibold"
+                    style={{
+                      color: Number(evidence.price_after) > Number(evidence.price_before) ? '#34D399' : '#FF2D55',
+                    }}
+                  >
+                    {((Number(evidence.price_after) - Number(evidence.price_before)) * 100).toFixed(0)}pp
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Fresh wallet flag from age */}
+            {evidence.wallet_age_days != null && Number(evidence.wallet_age_days) <= 7 && (
+              <div className="flex flex-wrap gap-2 pt-2 border-t border-border-subtle">
+                <FlagBadge color="#FF2D55" label="Fresh Wallet" />
+              </div>
+            )}
+          </div>
         ) : (
           <div className="text-text-tertiary font-mono text-sm">
             No wallet data available
@@ -248,20 +314,20 @@ export default function CaseDetail() {
                   className="ml-auto font-mono text-xs font-semibold"
                   style={{ color: riskColor(evidence.rf_analysis.rf_score / 100) }}
                 >
-                  {evidence.rf_analysis.rf_score.toFixed(1)}
+                  {Number(evidence.rf_analysis.rf_score).toFixed(1)}
                 </span>
               </div>
               {evidence.rf_analysis.top_features && (
                 <div className="flex flex-wrap gap-1.5">
-                  {Object.entries(evidence.rf_analysis.top_features)
-                    .sort(([, a], [, b]) => b - a)
+                  {normalizeTopFeatures(evidence.rf_analysis.top_features)
+                    .sort((a, b) => b.importance - a.importance)
                     .slice(0, 5)
-                    .map(([feature, importance]) => (
+                    .map((item) => (
                       <span
-                        key={feature}
+                        key={item.feature}
                         className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-bg-active text-text-secondary"
                       >
-                        {feature}: {importance.toFixed(2)}
+                        {item.feature}: {item.importance.toFixed(2)}
                       </span>
                     ))}
                 </div>
@@ -285,7 +351,7 @@ export default function CaseDetail() {
                 <span className="font-semibold" style={{
                   color: riskColor(evidence.game_theory_analysis.game_theory_suspicion_score / 100),
                 }}>
-                  {evidence.game_theory_analysis.game_theory_suspicion_score.toFixed(1)}
+                  {Number(evidence.game_theory_analysis.game_theory_suspicion_score).toFixed(1)}
                 </span>
               </div>
             </div>
@@ -307,38 +373,140 @@ export default function CaseDetail() {
       {/* 6. OSINT Signals (right column) */}
       {/* ------------------------------------------------------------------ */}
       <Card title="OSINT Signals">
-        {evidence?.osint_signals && evidence.osint_signals.length > 0 ? (
-          <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
-            {evidence.osint_signals.map((signal, i) => (
-              <div
-                key={i}
-                className="flex items-start gap-3 p-2.5 rounded-md bg-bg-tertiary border border-border-subtle"
-              >
-                <Satellite size={14} className="text-threat-high shrink-0 mt-0.5" />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-mono text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-bg-active text-threat-high">
-                      {signal.source}
-                    </span>
-                    <span className="font-mono text-[10px] text-text-tertiary ml-auto shrink-0">
-                      {signal.hours_before_trade > 0
-                        ? `${signal.hours_before_trade.toFixed(1)}h before trade`
-                        : `${Math.abs(signal.hours_before_trade).toFixed(1)}h after trade`}
-                    </span>
+        {(() => {
+          // Merge all available signal sources: evidence.osint_signals, API osint_events, fallback context
+          const hasInlineSignals = evidence?.osint_signals && evidence.osint_signals.length > 0;
+          const hasApiEvents = osint_events && osint_events.length > 0;
+
+          if (hasInlineSignals) {
+            return (
+              <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                {evidence!.osint_signals!.map((signal, i) => (
+                  <div
+                    key={i}
+                    className="flex items-start gap-3 p-2.5 rounded-md bg-bg-tertiary border border-border-subtle"
+                  >
+                    <Satellite size={14} className="text-threat-high shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-mono text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-bg-active text-threat-high">
+                          {signal.source}
+                        </span>
+                        <span className="font-mono text-[10px] text-text-tertiary ml-auto shrink-0">
+                          {Number(signal.hours_before_trade) > 0
+                            ? `${Number(signal.hours_before_trade).toFixed(1)}h before trade`
+                            : `${Math.abs(Number(signal.hours_before_trade)).toFixed(1)}h after trade`}
+                        </span>
+                      </div>
+                      <p className="font-mono text-xs text-text-secondary leading-relaxed truncate">
+                        {signal.headline}
+                      </p>
+                    </div>
                   </div>
-                  <p className="font-mono text-xs text-text-secondary leading-relaxed truncate">
-                    {signal.headline}
-                  </p>
-                </div>
+                ))}
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-8 text-text-tertiary">
-            <Satellite size={24} className="mb-2 opacity-50" />
-            <span className="font-mono text-xs">No OSINT signals found</span>
-          </div>
-        )}
+            );
+          }
+
+          if (hasApiEvents) {
+            return (
+              <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                {/* Scenario context if available */}
+                {evidence?.scenario && (
+                  <div className="p-2.5 rounded-md bg-bg-tertiary border border-border-subtle mb-1">
+                    <p className="font-mono text-xs text-text-secondary leading-relaxed">
+                      {evidence.scenario}
+                    </p>
+                  </div>
+                )}
+                {osint_events.map((event) => (
+                  <div
+                    key={event.event_id}
+                    className="flex items-start gap-3 p-2.5 rounded-md bg-bg-tertiary border border-border-subtle"
+                  >
+                    <Satellite size={14} className="text-threat-high shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-mono text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-bg-active text-threat-high">
+                          {event.source}
+                        </span>
+                        {event.category && (
+                          <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-bg-active text-text-tertiary">
+                            {event.category}
+                          </span>
+                        )}
+                        <span className="font-mono text-[10px] text-text-tertiary ml-auto shrink-0">
+                          {formatRelativeTime(event.timestamp)}
+                        </span>
+                      </div>
+                      <p className="font-mono text-xs text-text-secondary leading-relaxed">
+                        {event.headline}
+                      </p>
+                      {event.source_url && (
+                        <a
+                          href={event.source_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-mono text-[10px] text-accent hover:underline mt-1 inline-block"
+                        >
+                          Source link
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          }
+
+          // Fallback: show news headline, scenario, or signal count
+          if (evidence?.news_headline || evidence?.scenario) {
+            return (
+              <div className="space-y-3">
+                {evidence?.news_headline && (
+                  <div className="flex items-start gap-3 p-2.5 rounded-md bg-bg-tertiary border border-border-subtle">
+                    <Satellite size={14} className="text-threat-critical shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-mono text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded bg-bg-active text-threat-critical">
+                          NEWS
+                        </span>
+                        {evidence.hours_before_news != null && (
+                          <span className="font-mono text-[10px] text-text-tertiary ml-auto shrink-0">
+                            {Number(evidence.hours_before_news) > 0
+                              ? `${Number(evidence.hours_before_news).toFixed(1)}h before trade`
+                              : `${Math.abs(Number(evidence.hours_before_news)).toFixed(1)}h after trade`}
+                          </span>
+                        )}
+                      </div>
+                      <p className="font-mono text-xs text-text-secondary leading-relaxed">
+                        {evidence.news_headline}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                {evidence?.scenario && (
+                  <div className="p-2.5 rounded-md bg-bg-tertiary border border-border-subtle">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <Brain size={14} className="text-accent shrink-0" />
+                      <span className="font-mono text-[10px] font-semibold uppercase text-text-tertiary">Scenario</span>
+                    </div>
+                    <p className="font-mono text-xs text-text-secondary leading-relaxed">
+                      {evidence.scenario}
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          return (
+            <div className="flex flex-col items-center justify-center py-8 text-text-tertiary">
+              <Satellite size={24} className="mb-2 opacity-50" />
+              <span className="font-mono text-xs">No OSINT signals found</span>
+            </div>
+          );
+        })()}
       </Card>
 
       {/* ------------------------------------------------------------------ */}
@@ -554,4 +722,20 @@ function riskColor(score: number): string {
   if (score > 0.7) return '#FF2D55';
   if (score > 0.4) return '#FFB800';
   return '#34D399';
+}
+
+/** Normalize top_features from either array [{feature,importance}] or Record<string,number> */
+function normalizeTopFeatures(
+  raw: Array<{ feature: string; importance: number }> | Record<string, number>,
+): Array<{ feature: string; importance: number }> {
+  if (Array.isArray(raw)) {
+    return raw.map((item) => ({
+      feature: String(item.feature),
+      importance: Number(item.importance),
+    }));
+  }
+  return Object.entries(raw).map(([feature, importance]) => ({
+    feature,
+    importance: Number(importance),
+  }));
 }

@@ -24,6 +24,8 @@ from src.data.database import (
     get_case,
     get_connection,
     get_evidence_packet,
+    get_osint_events_by_ids,
+    get_osint_events_by_market,
     get_stats,
     init_schema,
     get_votes_for_case,
@@ -143,6 +145,27 @@ def _decode_case(case: Dict[str, Any]) -> Dict[str, Any]:
 
 def _decode_packet(packet: Dict[str, Any]) -> Dict[str, Any]:
     return _decode_json_field(packet, "evidence_json", "evidence")
+
+
+def _resolve_osint_events(
+    conn: "sqlite3.Connection",
+    evidence: Optional[Dict[str, Any]],
+    market_id: Optional[str],
+) -> List[Dict[str, Any]]:
+    """Resolve related OSINT events from evidence IDs or market matching."""
+    # Try osint_event_ids from evidence JSON first
+    if evidence:
+        event_ids = evidence.get("osint_event_ids")
+        if isinstance(event_ids, list) and event_ids:
+            events = get_osint_events_by_ids(conn, event_ids)
+            if events:
+                return events
+
+    # Fallback: search by market_id in related_market_ids
+    if market_id:
+        return get_osint_events_by_market(conn, market_id)
+
+    return []
 
 
 def _where_clause(filters: List[str]) -> str:
@@ -270,21 +293,79 @@ def get_case_details(case_id: str) -> Dict[str, Any]:
     conn = _connect()
     try:
         case = get_case(conn, case_id)
+
+        # Fallback: look up by anomaly_event_id (when navigating from anomaly feed)
+        if case is None:
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT * FROM sentinel_index WHERE anomaly_event_id = ? LIMIT 1",
+                (case_id,),
+            )
+            row = cursor.fetchone()
+            if row:
+                case = dict(row)
+
+        # Last fallback: build a synthetic case from the anomaly itself
+        if case is None:
+            anomaly = get_anomaly(conn, case_id)
+            if anomaly:
+                osint_events = _resolve_osint_events(
+                    conn, None, anomaly.get("market_id"),
+                )
+                return {
+                    "case": {
+                        "case_id": case_id,
+                        "anomaly_event_id": case_id,
+                        "market_id": anomaly.get("market_id"),
+                        "market_name": anomaly.get("market_name"),
+                        "classification": anomaly.get("classification"),
+                        "bss_score": anomaly.get("bss_score"),
+                        "pes_score": anomaly.get("pes_score"),
+                        "temporal_gap_hours": None,
+                        "consensus_score": None,
+                        "vote_count": 0,
+                        "votes_agree": 0,
+                        "votes_disagree": 0,
+                        "votes_uncertain": 0,
+                        "status": "UNDER_REVIEW",
+                        "sar_report": None,
+                        "xai_summary": anomaly.get("xai_narrative"),
+                        "evidence": None,
+                        "created_at": anomaly.get("created_at"),
+                        "updated_at": anomaly.get("updated_at"),
+                    },
+                    "anomaly": _decode_anomaly(anomaly),
+                    "evidence_packet": _decode_packet(get_evidence_packet(conn, case_id)) if get_evidence_packet(conn, case_id) else None,
+                    "osint_events": osint_events,
+                    "votes": [],
+                    "vote_count": 0,
+                }
+
         if case is None:
             raise HTTPException(status_code=404, detail=f"Case not found: {case_id}")
+
+        resolved_case_id = case.get("case_id", case_id)
 
         anomaly = None
         anomaly_event_id = case.get("anomaly_event_id")
         if anomaly_event_id:
             anomaly = get_anomaly(conn, anomaly_event_id)
 
-        evidence_packet = get_evidence_packet(conn, case_id)
-        votes = get_votes_for_case(conn, case_id)
+        evidence_packet = get_evidence_packet(conn, resolved_case_id)
+        votes = get_votes_for_case(conn, resolved_case_id)
+
+        # Resolve related OSINT events
+        decoded_case = _decode_case(case)
+        evidence_data = decoded_case.get("evidence")
+        osint_events = _resolve_osint_events(
+            conn, evidence_data, case.get("market_id"),
+        )
 
         return {
-            "case": _decode_case(case),
+            "case": decoded_case,
             "anomaly": _decode_anomaly(anomaly) if anomaly else None,
             "evidence_packet": _decode_packet(evidence_packet) if evidence_packet else None,
+            "osint_events": osint_events,
             "votes": votes,
             "vote_count": len(votes),
         }

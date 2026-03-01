@@ -42,21 +42,21 @@ export default function TemporalGapChart({ evidence, classification }: Props) {
         items.push({
           type: 'osint',
           label: s.headline,
-          hoursFromTrade: s.hours_before_trade,
+          hoursFromTrade: Number(s.hours_before_trade),
           source: s.source,
         });
       });
     }
 
-    // News event (if separate from OSINT signals)
-    if (evidence.news_headline && evidence.news_timestamp) {
-      const tradeTime = evidence.trade_timestamp
-        ? new Date(evidence.trade_timestamp).getTime()
-        : 0;
-      const newsTime = new Date(evidence.news_timestamp).getTime();
-      const hoursDiff = tradeTime ? (tradeTime - newsTime) / (1000 * 60 * 60) : 0;
+    // News event — try multiple sources for timing data
+    let newsAdded = false;
 
-      // Only add if not already in OSINT signals
+    // Method 1: news_headline + news_timestamp (compute gap from timestamps)
+    if (evidence.news_headline && evidence.news_timestamp && evidence.trade_timestamp) {
+      const tradeTime = new Date(evidence.trade_timestamp).getTime();
+      const newsTime = new Date(evidence.news_timestamp).getTime();
+      const hoursDiff = (tradeTime - newsTime) / (1000 * 60 * 60);
+
       const alreadyPresent = evidence.osint_signals?.some(
         (s) => s.headline === evidence.news_headline,
       );
@@ -66,7 +66,17 @@ export default function TemporalGapChart({ evidence, classification }: Props) {
           label: evidence.news_headline,
           hoursFromTrade: hoursDiff,
         });
+        newsAdded = true;
       }
+    }
+
+    // Method 2: hours_before_news is available (from pipeline --live)
+    if (!newsAdded && evidence.hours_before_news != null && Number(evidence.hours_before_news) !== 0) {
+      items.push({
+        type: 'news',
+        label: evidence.news_headline ?? 'Public information event',
+        hoursFromTrade: Number(evidence.hours_before_news),
+      });
     }
 
     return items;

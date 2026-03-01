@@ -2,10 +2,8 @@ import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   Activity,
-  FileSearch,
   Database,
   Users,
-  Cpu,
   ChevronLeft,
   ChevronRight,
   Eye,
@@ -23,19 +21,12 @@ const NAV_GROUPS = [
     label: 'ANALYSIS',
     items: [
       { to: '/index', icon: Database, label: 'Sentinel Index' },
-      { to: '/case', icon: FileSearch, label: 'Case Detail' },
     ],
   },
   {
     label: 'COMMUNITY',
     items: [
       { to: '/arena', icon: Users, label: 'Arena' },
-    ],
-  },
-  {
-    label: 'SYSTEM',
-    items: [
-      { to: '/health', icon: Cpu, label: 'System Health' },
     ],
   },
 ] as const;

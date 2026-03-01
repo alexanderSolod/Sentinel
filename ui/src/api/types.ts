@@ -57,9 +57,17 @@ export interface GateEvaluation {
   gates_passed: Array<{ gate: string; decision: string; score: number }>;
 }
 
+export interface TopFeature {
+  feature: string;
+  importance: number;
+}
+
 export interface RfAnalysis {
   rf_score: number;
-  top_features: Record<string, number>;
+  rf_label?: string;
+  confidence?: number;
+  source?: string;
+  top_features: TopFeature[] | Record<string, number>;
 }
 
 export interface GameTheoryAnalysis {
@@ -84,11 +92,35 @@ export interface EvidenceClassification {
 }
 
 export interface EvidenceJson {
+  // Common fields
   trade_timestamp: string | null;
   news_timestamp: string | null;
   news_headline: string | null;
   trade_size_usd: number | null;
   osint_signals: OsintSignal[] | null;
+
+  // Wallet data (from pipeline --init/--mock/--live)
+  wallet_address?: string | null;
+  wallet_age_days?: number | null;
+  wallet_trades?: number | null;
+  price_before?: number | null;
+  price_after?: number | null;
+  z_score?: number | null;
+
+  // Context fields (from pipeline --init/--mock)
+  osint_event_ids?: string[] | null;
+  scenario?: string | null;
+
+  // Pipeline --live fields
+  market_id?: string | null;
+  market_name?: string | null;
+  hours_before_news?: number | null;
+  osint_signals_before_trade?: number | null;
+  osint_context_count?: number | null;
+  evidence_summary?: string[] | null;
+  recommendation?: string | null;
+
+  // Analysis (from pipeline --live)
   gate_evaluation: GateEvaluation | null;
   rf_analysis: RfAnalysis | null;
   game_theory_analysis: GameTheoryAnalysis | null;
@@ -217,10 +249,25 @@ export interface HealthResponse {
 // Case detail
 // ---------------------------------------------------------------------------
 
+export interface OsintEvent {
+  event_id: string;
+  timestamp: string;
+  source: string;
+  source_url: string | null;
+  headline: string;
+  content: string | null;
+  category: string | null;
+  geolocation: string | null;
+  relevance_score: number | null;
+  related_market_ids: string | null;
+  created_at: string;
+}
+
 export interface CaseDetailResponse {
   case: SentinelCase;
   anomaly: Anomaly | null;
   evidence_packet: EvidencePacket | null;
+  osint_events: OsintEvent[];
   votes: Vote[];
   vote_count: number;
 }

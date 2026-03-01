@@ -4,7 +4,6 @@ import LiveMonitor from './pages/LiveMonitor.tsx';
 import CaseDetail from './pages/CaseDetail.tsx';
 import SentinelIndex from './pages/SentinelIndex.tsx';
 import Arena from './pages/Arena.tsx';
-import SystemHealth from './pages/SystemHealth.tsx';
 
 export default function App() {
   return (
@@ -13,10 +12,8 @@ export default function App() {
         <Route element={<DashboardLayout />}>
           <Route path="/" element={<LiveMonitor />} />
           <Route path="/case/:caseId" element={<CaseDetail />} />
-          <Route path="/case" element={<CaseDetail />} />
           <Route path="/index" element={<SentinelIndex />} />
           <Route path="/arena" element={<Arena />} />
-          <Route path="/health" element={<SystemHealth />} />
         </Route>
       </Routes>
     </BrowserRouter>

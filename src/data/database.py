@@ -354,6 +354,41 @@ def get_osint_events_in_range(
     return [dict(row) for row in cursor.fetchall()]
 
 
+def get_osint_events_by_ids(
+    conn: sqlite3.Connection,
+    event_ids: List[str],
+) -> List[Dict]:
+    """Get OSINT events by a list of event IDs."""
+    if not event_ids:
+        return []
+    cursor = conn.cursor()
+    placeholders = ",".join("?" for _ in event_ids)
+    cursor.execute(
+        f"SELECT * FROM osint_events WHERE event_id IN ({placeholders}) ORDER BY timestamp ASC",
+        event_ids,
+    )
+    return [dict(row) for row in cursor.fetchall()]
+
+
+def get_osint_events_by_market(
+    conn: sqlite3.Connection,
+    market_id: str,
+    limit: int = 50,
+) -> List[Dict]:
+    """Get OSINT events related to a market (via related_market_ids JSON)."""
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT * FROM osint_events
+        WHERE related_market_ids LIKE ?
+        ORDER BY timestamp DESC
+        LIMIT ?
+        """,
+        (f"%{market_id}%", limit),
+    )
+    return [dict(row) for row in cursor.fetchall()]
+
+
 # ============================================================
 # CRUD Operations for wallet_profiles
 # ============================================================
