@@ -31,6 +31,7 @@ import Skeleton from '../components/ui/Skeleton.tsx';
 import TemporalGapChart from '../components/charts/TemporalGapChart.tsx';
 import ClassificationQuadrant from '../components/charts/ClassificationQuadrant.tsx';
 import { formatNumber, formatPercent, formatRelativeTime } from '../lib/formatters.ts';
+import { SCORE_DEFINITIONS } from '../lib/scoreDefinitions.ts';
 
 export default function CaseDetail() {
   const { caseId } = useParams<{ caseId: string }>();
@@ -127,8 +128,8 @@ export default function CaseDetail() {
 
         {/* BSS / PES score bars */}
         <div className="grid grid-cols-2 gap-4 mt-4">
-          <ScoreBar label="BSS" score={sentinelCase.bss_score} />
-          <ScoreBar label="PES" score={sentinelCase.pes_score} />
+          <ScoreBar label="BSS" score={sentinelCase.bss_score} tooltip={SCORE_DEFINITIONS.BSS.long} />
+          <ScoreBar label="PES" score={sentinelCase.pes_score} tooltip={SCORE_DEFINITIONS.PES.long} />
         </div>
       </Card>
 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Search, Download, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Download, ChevronLeft, ChevronRight, Info } from 'lucide-react';
 import { useIndex } from '../api/hooks.ts';
 import type { SentinelCase } from '../api/types.ts';
 import Card from '../components/ui/Card.tsx';
@@ -10,12 +10,14 @@ import ClassificationBadge from '../components/ui/ClassificationBadge.tsx';
 import StatusBadge from '../components/ui/StatusBadge.tsx';
 import Skeleton from '../components/ui/Skeleton.tsx';
 import { formatRelativeTime, scoreColor } from '../lib/formatters.ts';
+import { SCORE_DEFINITIONS } from '../lib/scoreDefinitions.ts';
+import Tooltip from '../components/ui/Tooltip.tsx';
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
 
-const PAGE_SIZE = 25;
+const PAGE_SIZE = 50;
 
 const CLASS_OPTIONS = [
   { value: '', label: 'All Classifications' },
@@ -198,9 +200,30 @@ export default function SentinelIndex() {
                 <th className="overline text-left px-5 py-2.5">Case ID</th>
                 <th className="overline text-left px-3 py-2.5">Market</th>
                 <th className="overline text-left px-3 py-2.5">Classification</th>
-                <th className="overline text-left px-3 py-2.5">BSS</th>
-                <th className="overline text-left px-3 py-2.5">PES</th>
-                <th className="overline text-left px-3 py-2.5">Consensus</th>
+                <th className="overline text-left px-3 py-2.5">
+                  <span className="inline-flex items-center gap-1">
+                    BSS
+                    <Tooltip content={SCORE_DEFINITIONS.BSS.long} position="bottom">
+                      <Info size={11} className="text-text-tertiary cursor-help" />
+                    </Tooltip>
+                  </span>
+                </th>
+                <th className="overline text-left px-3 py-2.5">
+                  <span className="inline-flex items-center gap-1">
+                    PES
+                    <Tooltip content={SCORE_DEFINITIONS.PES.long} position="bottom">
+                      <Info size={11} className="text-text-tertiary cursor-help" />
+                    </Tooltip>
+                  </span>
+                </th>
+                <th className="overline text-left px-3 py-2.5">
+                  <span className="inline-flex items-center gap-1">
+                    Consensus
+                    <Tooltip content={SCORE_DEFINITIONS.CONSENSUS.long} position="bottom">
+                      <Info size={11} className="text-text-tertiary cursor-help" />
+                    </Tooltip>
+                  </span>
+                </th>
                 <th className="overline text-left px-3 py-2.5">Status</th>
                 <th className="overline text-left px-3 py-2.5">Created</th>
               </tr>

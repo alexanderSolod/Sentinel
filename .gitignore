@@ -4,9 +4,9 @@
 !.env.template
 
 # Database
-data/sentinel.db
-data/sentinel.db-wal
-data/sentinel.db-shm
+*.db
+*.db-wal
+*.db-shm
 
 # Python
 __pycache__/
@@ -15,6 +15,9 @@ __pycache__/
 dist/
 build/
 .eggs/
+
+# Node
+node_modules/
 
 # ChromaDB
 data/chroma/

@@ -57,7 +57,7 @@ body {
   background: var(--color-bg-primary);
   color: var(--color-text-primary);
   font-weight: 600;
-  font-size: 13px;
+  font-size: 17px;
   -webkit-font-smoothing: none;
   letter-spacing: 0.03em;
   overflow-x: hidden;
@@ -105,7 +105,7 @@ body::after {
 /* ── Overline utility ───────────────────────────────────────────────────── */
 .overline {
   font-family: var(--font-mono);
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.15em;
   text-transform: uppercase;
@@ -162,7 +162,7 @@ body::after {
 .panel-header {
   display: inline-block;
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.15em;
   text-transform: uppercase;
@@ -205,7 +205,7 @@ body::after {
 /* ── Terminal output text ───────────────────────────────────────────────── */
 .terminal-text {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 16px;
   color: #33ff33;
   text-transform: none;
   letter-spacing: 0.02em;
@@ -215,32 +215,32 @@ body::after {
 /* ── Markdown inside terminal ───────────────────────────────────────────── */
 .prose-terminal {
   font-family: var(--font-mono);
-  font-size: 12px;
-  color: #33ff33;
+  font-size: 16px;
+  color: #ff8c00;
   line-height: 1.7;
 }
 .prose-terminal h1,
 .prose-terminal h2,
 .prose-terminal h3 {
-  color: #33ff33;
+  color: #ff8c00;
   font-weight: 700;
   margin-top: 1.2em;
   margin-bottom: 0.4em;
-  border-bottom: 1px solid #33ff3322;
+  border-bottom: 1px solid #ff8c0022;
   padding-bottom: 0.3em;
 }
-.prose-terminal h1 { font-size: 16px; }
-.prose-terminal h2 { font-size: 14px; }
-.prose-terminal h3 { font-size: 13px; }
+.prose-terminal h1 { font-size: 20px; }
+.prose-terminal h2 { font-size: 18px; }
+.prose-terminal h3 { font-size: 16px; }
 .prose-terminal p {
   margin-bottom: 0.7em;
 }
 .prose-terminal strong {
-  color: #66ff66;
+  color: inherit;
   font-weight: 700;
 }
 .prose-terminal em {
-  color: #33ff33cc;
+  color: #ff8c00cc;
   font-style: italic;
 }
 .prose-terminal ul,
@@ -252,24 +252,24 @@ body::after {
   margin-bottom: 0.3em;
 }
 .prose-terminal li::marker {
-  color: #33ff3366;
+  color: #ff8c0066;
 }
 .prose-terminal code {
-  background: #33ff3311;
-  border: 1px solid #33ff3322;
+  background: #ff8c0011;
+  border: 1px solid #ff8c0022;
   padding: 1px 4px;
   border-radius: 2px;
-  font-size: 11px;
+  font-size: 14px;
 }
 .prose-terminal blockquote {
-  border-left: 2px solid #33ff3344;
+  border-left: 2px solid #ff8c0044;
   padding-left: 0.8em;
-  color: #33ff33aa;
+  color: #ff8c00aa;
   margin: 0.5em 0;
 }
 .prose-terminal hr {
   border: none;
-  border-top: 1px solid #33ff3322;
+  border-top: 1px solid #ff8c0022;
   margin: 1em 0;
 }
 
@@ -283,4 +283,16 @@ body::after {
   color: #33ff33;
   animation: cursor-blink 1s step-end infinite;
   margin-left: 2px;
+}
+
+/* ── Mermaid diagram overrides ─────────────────────────────────────────── */
+.mermaid-container svg {
+  max-width: 100%;
+  height: auto;
+}
+.mermaid-container .nodeLabel,
+.mermaid-container .edgeLabel {
+  font-family: 'Courier New', monospace !important;
+  text-transform: none !important;
+  letter-spacing: 0.03em !important;
 }

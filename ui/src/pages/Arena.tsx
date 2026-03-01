@@ -10,6 +10,7 @@ import ScoreBar from '../components/ui/ScoreBar.tsx';
 import Skeleton from '../components/ui/Skeleton.tsx';
 import VoteDonut from '../components/charts/VoteDonut.tsx';
 import { formatRelativeTime } from '../lib/formatters.ts';
+import { SCORE_DEFINITIONS } from '../lib/scoreDefinitions.ts';
 
 // ---------------------------------------------------------------------------
 // Vote button config
@@ -181,8 +182,8 @@ export default function Arena() {
 
               {/* Scores */}
               <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-                <ScoreBar label="BSS" score={caseData.bss_score} />
-                <ScoreBar label="PES" score={caseData.pes_score} />
+                <ScoreBar label="BSS" score={caseData.bss_score} tooltip={SCORE_DEFINITIONS.BSS.long} />
+                <ScoreBar label="PES" score={caseData.pes_score} tooltip={SCORE_DEFINITIONS.PES.long} />
               </div>
 
               {/* AI Analysis */}

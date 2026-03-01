@@ -7,6 +7,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
+  BookOpen,
+  HeartPulse,
 } from 'lucide-react';
 import { useHealth } from '../../api/hooks.ts';
 
@@ -29,6 +31,13 @@ const NAV_GROUPS = [
       { to: '/arena', icon: Users, label: 'Arena' },
     ],
   },
+  {
+    label: 'SYSTEM',
+    items: [
+      { to: '/reference', icon: BookOpen, label: 'Reference' },
+      { to: '/system', icon: HeartPulse, label: 'System Health' },
+    ],
+  },
 ] as const;
 
 export default function Sidebar() {
@@ -41,27 +50,27 @@ export default function Sidebar() {
       className={`
         flex flex-col h-screen bg-bg-secondary border-r border-border-subtle
         transition-all duration-300 shrink-0
-        ${collapsed ? 'w-16' : 'w-60'}
+        ${collapsed ? 'w-16' : 'w-72'}
       `}
     >
       {/* Logo */}
-      <div className="flex items-center gap-3 px-4 h-16 border-b border-border-subtle">
+      <div className="flex items-center gap-3 px-5 h-18 border-b border-border-subtle">
         <div className="relative shrink-0">
-          <Eye size={20} className="text-accent pulse-dot" />
+          <Eye size={24} className="text-accent pulse-dot" />
         </div>
         {!collapsed && (
-          <span className="font-mono font-bold text-lg tracking-[0.15em] text-text-primary">
+          <span className="font-mono font-bold text-xl tracking-[0.15em] text-text-primary">
             SENTINEL
           </span>
         )}
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-4">
+      <nav className="flex-1 overflow-y-auto py-6">
         {NAV_GROUPS.map((group) => (
-          <div key={group.label} className="mb-4">
+          <div key={group.label} className="mb-6">
             {!collapsed && (
-              <div className="overline px-4 mb-2">{group.label}</div>
+              <div className="overline px-5 mb-3">{group.label}</div>
             )}
             {group.items.map((item) => (
               <NavLink
@@ -69,8 +78,8 @@ export default function Sidebar() {
                 to={item.to}
                 end={('end' in item && item.end) || false}
                 className={({ isActive }) => `
-                  flex items-center gap-3 px-4 py-2 mx-2 rounded-md
-                  font-mono text-[13px] font-medium
+                  flex items-center gap-3 px-5 py-3 mx-2 rounded-md
+                  font-mono text-[16px] font-medium
                   transition-all duration-150
                   ${isActive
                     ? 'text-accent bg-accent-bg border-l-2 border-accent'
@@ -79,7 +88,7 @@ export default function Sidebar() {
                   ${collapsed ? 'justify-center mx-1 px-2' : ''}
                 `}
               >
-                <item.icon size={18} strokeWidth={1.5} className="shrink-0" />
+                <item.icon size={22} strokeWidth={1.5} className="shrink-0" />
                 {!collapsed && <span>{item.label}</span>}
               </NavLink>
             ))}
@@ -96,7 +105,7 @@ export default function Sidebar() {
             }`}
           />
           {!collapsed && (
-            <span className="font-mono text-[11px] font-semibold tracking-wider uppercase text-text-secondary">
+            <span className="font-mono text-[13px] font-semibold tracking-wider uppercase text-text-secondary">
               {isConnected ? 'Connected' : 'Offline'}
             </span>
           )}

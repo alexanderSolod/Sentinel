@@ -18,6 +18,7 @@ import ScoreBar from '../components/ui/ScoreBar.tsx';
 import WalletAddress from '../components/ui/WalletAddress.tsx';
 import Skeleton from '../components/ui/Skeleton.tsx';
 import { formatRelativeTime, formatNumber } from '../lib/formatters.ts';
+import { SCORE_DEFINITIONS } from '../lib/scoreDefinitions.ts';
 
 // ---------------------------------------------------------------------------
 // KPI metric card
@@ -212,8 +213,8 @@ export default function LiveMonitor() {
                   </div>
                   {/* Bottom row: scores */}
                   <div className="grid grid-cols-2 gap-x-4 gap-y-1 pl-1">
-                    <ScoreBar label="BSS" score={anomaly.bss_score} />
-                    <ScoreBar label="PES" score={anomaly.pes_score} />
+                    <ScoreBar label="BSS" score={anomaly.bss_score} tooltip={SCORE_DEFINITIONS.BSS.long} />
+                    <ScoreBar label="PES" score={anomaly.pes_score} tooltip={SCORE_DEFINITIONS.PES.long} />
                   </div>
                   {anomaly.z_score != null && (
                     <div className="mt-1 pl-1 font-mono text-[11px] text-text-tertiary">

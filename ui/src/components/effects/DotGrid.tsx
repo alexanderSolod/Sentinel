@@ -45,12 +45,12 @@ export default function DotGrid() {
           const t = Math.max(0, 1 - dist / influenceRadius);
           const size = baseDotSize + (maxDotSize - baseDotSize) * t * t;
 
-          const baseR = 26, baseG = 26, baseB = 46;
-          const accentR = 0, accentG = 240, accentB = 255;
+          const baseR = 30, baseG = 22, baseB = 10;
+          const accentR = 255, accentG = 140, accentB = 0;
           const cr = Math.round(baseR + (accentR - baseR) * t);
           const cg = Math.round(baseG + (accentG - baseG) * t);
           const cb = Math.round(baseB + (accentB - baseB) * t);
-          const alpha = 0.3 + t * 0.5;
+          const alpha = 0.15 + t * 0.35;
 
           ctx.beginPath();
           ctx.arc(x, y, size, 0, Math.PI * 2);
