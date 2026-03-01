@@ -18,6 +18,7 @@ Usage:
 import sys
 import subprocess
 import logging
+import os
 from pathlib import Path
 
 # Add src to path
@@ -28,6 +29,11 @@ logging.basicConfig(
     format="%(asctime)s [%(name)s] %(levelname)s: %(message)s",
     datefmt="%H:%M:%S",
 )
+
+
+def _get_firms_api_key() -> str | None:
+    """Return FIRMS key using primary env var with backward-compatible fallback."""
+    return os.getenv("NASA_FIRMS_API_KEY") or os.getenv("NASA_FIRMS_KEY")
 
 
 def init_db():
@@ -245,7 +251,6 @@ def _pipeline_live():
     """Fetch live market data, gather OSINT from ALL sources, and classify."""
     import math
     import time as _time
-    import os
     from datetime import datetime, timezone
     from src.data.database import init_schema
     from src.data.polymarket_client import PolymarketClient
@@ -377,7 +382,7 @@ def _pipeline_live():
 
     # --- NASA FIRMS: fire detections (needs key) ---
     print("   --- NASA FIRMS (fires) ---")
-    firms_key = os.getenv("NASA_FIRMS_API_KEY")
+    firms_key = _get_firms_api_key()
     if firms_key:
         firms = FIRMSClient(firms_key)
         try:
@@ -389,7 +394,7 @@ def _pipeline_live():
         except Exception as e:
             print(f"   FIRMS [fires]: unavailable ({type(e).__name__})")
     else:
-        print("   FIRMS [fires]: skipped (no NASA_FIRMS_API_KEY)")
+        print("   FIRMS [fires]: skipped (no NASA_FIRMS_API_KEY/NASA_FIRMS_KEY)")
 
     # --- Index all OSINT into vector store ---
     print(f"\n   Indexing {len(all_osint)} OSINT events into vector store...")
@@ -547,7 +552,6 @@ def run_monitor(args: list):
       --live   Connect to Polymarket WebSocket for real trades
     """
     import asyncio
-    import os
     from dotenv import load_dotenv
     load_dotenv()
 
@@ -567,7 +571,7 @@ def run_monitor(args: list):
     correlator = EvidenceCorrelator(
         api_key=os.getenv("MISTRAL_API_KEY"),
         acled_token=os.getenv("ACLED_ACCESS_TOKEN"),
-        firms_key=os.getenv("NASA_FIRMS_API_KEY"),
+        firms_key=_get_firms_api_key(),
     )
 
     if mode == "mock":
@@ -596,6 +600,12 @@ def run_monitor(args: list):
 
 def run_api():
     """Launch FastAPI backend."""
+    from src.data.database import init_schema
+
+    try:
+        init_schema()
+    except Exception as exc:
+        print(f"Warning: failed to initialize DB schema before API launch: {exc}")
     print("Launching Sentinel API on http://localhost:8000")
     subprocess.run(["uvicorn", "src.api.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"])
 

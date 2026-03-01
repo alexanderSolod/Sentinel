@@ -531,7 +531,11 @@ class FIRMSClient:
     }
 
     def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or os.getenv("NASA_FIRMS_API_KEY")
+        self.api_key = (
+            api_key
+            or os.getenv("NASA_FIRMS_API_KEY")
+            or os.getenv("NASA_FIRMS_KEY")
+        )
 
     def get_fires(
         self,
@@ -549,7 +553,7 @@ class FIRMSClient:
             List of DisasterEvent objects
         """
         if not self.api_key:
-            logger.warning("NASA_FIRMS_API_KEY not set")
+            logger.warning("NASA_FIRMS_API_KEY/NASA_FIRMS_KEY not set")
             return []
 
         days = max(1, min(days, 10))

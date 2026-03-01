@@ -297,6 +297,12 @@ class EvidenceCorrelator:
         """Run live WebSocket stream and process trades indefinitely."""
         handler = TradeStreamHandler(
             on_trade=self.process_trade,
+            worker_concurrency=4,
+            max_queue_size=2000,
+            callback_timeout_seconds=25.0,
+            circuit_breaker_threshold=25,
+            circuit_breaker_cooldown_seconds=15.0,
+            drop_on_backpressure=True,
             event_filter=event_filter,
             market_filter=market_filter,
         )

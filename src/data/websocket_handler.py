@@ -36,6 +36,11 @@ DEFAULT_WS_HOST = "wss://ws-live-data.polymarket.com"
 DEFAULT_PING_INTERVAL = 30  # seconds
 DEFAULT_MAX_RECONNECT_DELAY = 30  # seconds
 DEFAULT_INITIAL_RECONNECT_DELAY = 1  # seconds
+DEFAULT_WORKER_CONCURRENCY = 4
+DEFAULT_TRADE_QUEUE_SIZE = 1000
+DEFAULT_CALLBACK_TIMEOUT_SECONDS = 20.0
+DEFAULT_CIRCUIT_BREAKER_THRESHOLD = 20
+DEFAULT_CIRCUIT_BREAKER_COOLDOWN_SECONDS = 10.0
 
 
 class ConnectionState(Enum):
@@ -50,9 +55,21 @@ class ConnectionState(Enum):
 class StreamStats:
     """Statistics about the trade stream."""
     trades_received: int = 0
+    trades_enqueued: int = 0
+    trades_processed: int = 0
+    trades_dropped: int = 0
+    callback_timeouts: int = 0
+    callback_errors: int = 0
     reconnect_count: int = 0
     last_trade_time: Optional[float] = None
     connected_since: Optional[float] = None
+    queue_depth: int = 0
+    queue_max_depth: int = 0
+    queue_wait_seconds_avg: float = 0.0
+    queue_wait_seconds_max: float = 0.0
+    processing_lag_seconds_avg: float = 0.0
+    processing_lag_seconds_max: float = 0.0
+    circuit_breaker_open: bool = False
     last_error: Optional[str] = None
 
 
@@ -137,6 +154,12 @@ class TradeStreamHandler:
         ping_interval: int = DEFAULT_PING_INTERVAL,
         max_reconnect_delay: int = DEFAULT_MAX_RECONNECT_DELAY,
         initial_reconnect_delay: int = DEFAULT_INITIAL_RECONNECT_DELAY,
+        worker_concurrency: int = DEFAULT_WORKER_CONCURRENCY,
+        max_queue_size: int = DEFAULT_TRADE_QUEUE_SIZE,
+        callback_timeout_seconds: float = DEFAULT_CALLBACK_TIMEOUT_SECONDS,
+        circuit_breaker_threshold: int = DEFAULT_CIRCUIT_BREAKER_THRESHOLD,
+        circuit_breaker_cooldown_seconds: float = DEFAULT_CIRCUIT_BREAKER_COOLDOWN_SECONDS,
+        drop_on_backpressure: bool = True,
         event_filter: Optional[str] = None,
         market_filter: Optional[str] = None,
     ) -> None:
@@ -150,6 +173,12 @@ class TradeStreamHandler:
             ping_interval: Seconds between heartbeat pings.
             max_reconnect_delay: Maximum delay between reconnection attempts.
             initial_reconnect_delay: Initial delay for reconnection backoff.
+            worker_concurrency: Number of async workers dispatching trade callbacks.
+            max_queue_size: Bounded trade queue depth before backpressure handling.
+            callback_timeout_seconds: Timeout for each trade callback execution.
+            circuit_breaker_threshold: Consecutive callback failures before dropping trades.
+            circuit_breaker_cooldown_seconds: Cooldown window when circuit opens.
+            drop_on_backpressure: Drop new trades when queue is full instead of blocking ingest.
             event_filter: Optional event slug to filter trades by event.
             market_filter: Optional market slug to filter trades by market.
         """
@@ -162,14 +191,26 @@ class TradeStreamHandler:
         self._ping_interval = ping_interval
         self._max_reconnect_delay = max_reconnect_delay
         self._initial_reconnect_delay = initial_reconnect_delay
+        self._worker_concurrency = max(1, worker_concurrency)
+        self._max_queue_size = max(1, max_queue_size)
+        self._callback_timeout_seconds = max(0.1, callback_timeout_seconds)
+        self._circuit_breaker_threshold = max(1, circuit_breaker_threshold)
+        self._circuit_breaker_cooldown_seconds = max(0.1, circuit_breaker_cooldown_seconds)
+        self._drop_on_backpressure = drop_on_backpressure
         self._event_filter = event_filter
         self._market_filter = market_filter
 
         self._state = ConnectionState.DISCONNECTED
         self._stats = StreamStats()
         self._ws: Optional[ClientConnection] = None
+        self._trade_queue: Optional[asyncio.Queue[tuple[Optional[TradeEvent], float]]] = None
+        self._workers: list[asyncio.Task] = []
         self._running = False
         self._stop_event: Optional[asyncio.Event] = None
+        self._queue_wait_samples = 0
+        self._processing_lag_samples = 0
+        self._consecutive_callback_failures = 0
+        self._circuit_open_until = 0.0
 
     @property
     def state(self) -> ConnectionState:
@@ -235,6 +276,142 @@ class TradeStreamHandler:
             self._stats.last_error = str(e)
             raise WebSocketConnectionError(f"Failed to connect to {self._host}: {e}") from e
 
+    def _refresh_queue_depth(self) -> None:
+        if self._trade_queue is None:
+            self._stats.queue_depth = 0
+            return
+        depth = self._trade_queue.qsize()
+        self._stats.queue_depth = depth
+        if depth > self._stats.queue_max_depth:
+            self._stats.queue_max_depth = depth
+
+    def _record_queue_wait(self, wait_seconds: float) -> None:
+        self._queue_wait_samples += 1
+        samples = self._queue_wait_samples
+        self._stats.queue_wait_seconds_avg += (wait_seconds - self._stats.queue_wait_seconds_avg) / samples
+        if wait_seconds > self._stats.queue_wait_seconds_max:
+            self._stats.queue_wait_seconds_max = wait_seconds
+
+    def _record_processing_lag(self, lag_seconds: float) -> None:
+        self._processing_lag_samples += 1
+        samples = self._processing_lag_samples
+        self._stats.processing_lag_seconds_avg += (
+            (lag_seconds - self._stats.processing_lag_seconds_avg) / samples
+        )
+        if lag_seconds > self._stats.processing_lag_seconds_max:
+            self._stats.processing_lag_seconds_max = lag_seconds
+
+    def _register_callback_failure(self, reason: str) -> None:
+        self._consecutive_callback_failures += 1
+        self._stats.last_error = reason
+
+        if self._consecutive_callback_failures >= self._circuit_breaker_threshold:
+            self._circuit_open_until = time.monotonic() + self._circuit_breaker_cooldown_seconds
+            self._consecutive_callback_failures = 0
+            self._stats.circuit_breaker_open = True
+            logger.error(
+                "Trade callback circuit opened for %.1fs after repeated failures",
+                self._circuit_breaker_cooldown_seconds,
+            )
+
+    async def _dispatch_trade(self, trade: TradeEvent, enqueued_at: float) -> None:
+        now = time.monotonic()
+        if now < self._circuit_open_until:
+            self._stats.circuit_breaker_open = True
+            self._stats.trades_dropped += 1
+            return
+
+        self._stats.circuit_breaker_open = False
+        self._record_queue_wait(max(0.0, now - enqueued_at))
+        lag_seconds = max(0.0, datetime.now(timezone.utc).timestamp() - trade.timestamp.timestamp())
+        self._record_processing_lag(lag_seconds)
+
+        try:
+            await asyncio.wait_for(self._on_trade(trade), timeout=self._callback_timeout_seconds)
+            self._stats.trades_processed += 1
+            self._consecutive_callback_failures = 0
+        except asyncio.TimeoutError:
+            self._stats.callback_timeouts += 1
+            self._register_callback_failure(f"trade_callback_timeout:{trade.trade_id}")
+            logger.error(
+                "Trade callback timeout after %.1fs for trade_id=%s",
+                self._callback_timeout_seconds,
+                trade.trade_id,
+            )
+        except Exception as e:
+            self._stats.callback_errors += 1
+            self._register_callback_failure(str(e))
+            logger.error("Error in trade callback: %s", e)
+
+    async def _enqueue_trade(self, trade: TradeEvent) -> None:
+        if self._trade_queue is None:
+            await self._dispatch_trade(trade, time.monotonic())
+            return
+
+        enqueued_at = time.monotonic()
+        if self._trade_queue.full() and self._drop_on_backpressure:
+            self._stats.trades_dropped += 1
+            self._stats.last_error = "trade_queue_full"
+            logger.warning("Dropping trade due full queue: trade_id=%s", trade.trade_id)
+            return
+
+        try:
+            if self._trade_queue.full():
+                await asyncio.wait_for(
+                    self._trade_queue.put((trade, enqueued_at)),
+                    timeout=0.5,
+                )
+            else:
+                self._trade_queue.put_nowait((trade, enqueued_at))
+        except asyncio.TimeoutError:
+            self._stats.trades_dropped += 1
+            self._stats.last_error = "trade_queue_put_timeout"
+            logger.warning("Dropping trade due queue put timeout: trade_id=%s", trade.trade_id)
+            return
+
+        self._stats.trades_enqueued += 1
+        self._refresh_queue_depth()
+
+    async def _worker_loop(self, worker_id: int) -> None:
+        if self._trade_queue is None:
+            return
+
+        while True:
+            trade, enqueued_at = await self._trade_queue.get()
+            self._refresh_queue_depth()
+            try:
+                if trade is None:
+                    return
+                await self._dispatch_trade(trade, enqueued_at)
+            finally:
+                self._trade_queue.task_done()
+                self._refresh_queue_depth()
+
+    async def _start_workers(self) -> None:
+        if self._trade_queue is None:
+            self._trade_queue = asyncio.Queue(maxsize=self._max_queue_size)
+        if self._workers:
+            return
+
+        self._workers = [
+            asyncio.create_task(self._worker_loop(i), name=f"trade-worker-{i}")
+            for i in range(self._worker_concurrency)
+        ]
+
+    async def _stop_workers(self) -> None:
+        if self._trade_queue is None:
+            return
+
+        workers = list(self._workers)
+        if workers:
+            for _ in workers:
+                await self._trade_queue.put((None, time.monotonic()))
+            await asyncio.gather(*workers, return_exceptions=True)
+
+        self._workers = []
+        self._trade_queue = None
+        self._refresh_queue_depth()
+
     async def _handle_message(self, message: str) -> None:
         """Parse and process an incoming WebSocket message."""
         try:
@@ -258,11 +435,7 @@ class TradeStreamHandler:
                     trade.price,
                     trade.market_slug,
                 )
-
-                try:
-                    await self._on_trade(trade)
-                except Exception as e:
-                    logger.error("Error in trade callback: %s", e)
+                await self._enqueue_trade(trade)
 
             else:
                 # Log other message types for debugging
@@ -331,6 +504,7 @@ class TradeStreamHandler:
 
         self._running = True
         self._stop_event = asyncio.Event()
+        await self._start_workers()
 
         try:
             # Initial connection
@@ -379,6 +553,7 @@ class TradeStreamHandler:
             finally:
                 self._ws = None
 
+        await self._stop_workers()
         await self._set_state(ConnectionState.DISCONNECTED)
         logger.info("Trade stream handler stopped")
 

@@ -1,10 +1,13 @@
 """Sentinel FastAPI backend."""
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
 from datetime import datetime, timezone
 import json
+import logging
 import os
 import sqlite3
+import threading
 import uuid
 from typing import Any, Dict, List, Literal, Optional
 
@@ -20,15 +23,33 @@ from src.data.database import (
     get_connection,
     get_evidence_packet,
     get_stats,
+    init_schema,
     get_votes_for_case,
     insert_vote,
     list_evidence_packets,
 )
 
+logger = logging.getLogger(__name__)
+
+_schema_init_lock = threading.Lock()
+_schema_initialized_path: Optional[str] = None
+
+
+@asynccontextmanager
+async def _lifespan(_: FastAPI):
+    """Best-effort schema init so fresh deployments don't return 500s."""
+    try:
+        _ensure_schema()
+    except HTTPException as exc:  # pragma: no cover - startup fallback
+        logger.error("%s", exc.detail)
+    yield
+
+
 app = FastAPI(
     title="Sentinel API",
     description="Live evidence correlation and case intelligence API",
     version="0.2.0",
+    lifespan=_lifespan,
 )
 
 
@@ -47,7 +68,29 @@ def _database_path() -> str:
     return os.getenv("DATABASE_PATH", DEFAULT_DB_PATH)
 
 
+def _ensure_schema() -> None:
+    """Initialize schema once per active DB path."""
+    global _schema_initialized_path
+
+    db_path = _database_path()
+    if _schema_initialized_path == db_path:
+        return
+
+    with _schema_init_lock:
+        if _schema_initialized_path == db_path:
+            return
+        try:
+            init_schema(db_path)
+        except Exception as exc:  # pragma: no cover - defensive
+            raise HTTPException(
+                status_code=503,
+                detail=f"Database initialization failed for {db_path}: {exc}",
+            ) from exc
+        _schema_initialized_path = db_path
+
+
 def _connect() -> sqlite3.Connection:
+    _ensure_schema()
     return get_connection(_database_path())
 
 
