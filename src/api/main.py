@@ -11,8 +11,9 @@ import threading
 import uuid
 from typing import Any, Dict, List, Literal, Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, Security
 from fastapi.responses import JSONResponse
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, Field
 
 from src.classification.evaluation import compute_evaluation_metrics
@@ -30,6 +31,22 @@ from src.data.database import (
 )
 
 logger = logging.getLogger(__name__)
+
+# Simple API key auth for mutating endpoints.
+# Set SENTINEL_API_KEY in .env; if unset, auth is disabled (open demo mode).
+_api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+_SENTINEL_API_KEY = os.getenv("SENTINEL_API_KEY")
+
+
+async def _require_api_key(
+    api_key: Optional[str] = Security(_api_key_header),
+) -> None:
+    """Reject requests to protected endpoints when an API key is configured."""
+    if _SENTINEL_API_KEY is None:
+        return  # auth disabled — open demo mode
+    if api_key != _SENTINEL_API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid or missing API key")
+
 
 _schema_init_lock = threading.Lock()
 _schema_initialized_path: Optional[str] = None
@@ -324,7 +341,7 @@ def query_index(
         conn.close()
 
 
-@app.post("/api/vote")
+@app.post("/api/vote", dependencies=[Depends(_require_api_key)])
 def submit_vote(payload: VoteRequest) -> Dict[str, Any]:
     conn = _connect()
     try:

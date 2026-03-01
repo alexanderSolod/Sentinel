@@ -607,7 +607,7 @@ def run_api():
     except Exception as exc:
         print(f"Warning: failed to initialize DB schema before API launch: {exc}")
     print("Launching Sentinel API on http://localhost:8000")
-    subprocess.run(["uvicorn", "src.api.main:app", "--reload", "--host", "0.0.0.0", "--port", "8000"])
+    subprocess.run(["uvicorn", "src.api.main:app", "--reload", "--host", "127.0.0.1", "--port", "8000"])
 
 
 def run_metrics():
