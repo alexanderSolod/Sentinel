@@ -5,6 +5,7 @@ import { Search, Download, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useIndex } from '../api/hooks.ts';
 import type { SentinelCase } from '../api/types.ts';
 import Card from '../components/ui/Card.tsx';
+import Select from '../components/ui/Select.tsx';
 import ClassificationBadge from '../components/ui/ClassificationBadge.tsx';
 import StatusBadge from '../components/ui/StatusBadge.tsx';
 import Skeleton from '../components/ui/Skeleton.tsx';
@@ -151,31 +152,16 @@ export default function SentinelIndex() {
         transition={{ duration: 0.3 }}
         className="flex flex-wrap items-center gap-3"
       >
-        {/* Classification filter */}
-        <select
+        <Select
           value={classFilter}
-          onChange={(e) => setClassFilter(e.target.value)}
-          className="bg-bg-tertiary border border-border-subtle rounded px-3 py-1.5 font-mono text-xs text-text-primary focus:outline-none focus:border-accent transition-colors cursor-pointer"
-        >
-          {CLASS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
-
-        {/* Status filter */}
-        <select
+          onChange={setClassFilter}
+          options={CLASS_OPTIONS as unknown as { value: string; label: string }[]}
+        />
+        <Select
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="bg-bg-tertiary border border-border-subtle rounded px-3 py-1.5 font-mono text-xs text-text-primary focus:outline-none focus:border-accent transition-colors cursor-pointer"
-        >
-          {STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </select>
+          onChange={setStatusFilter}
+          options={STATUS_OPTIONS as unknown as { value: string; label: string }[]}
+        />
 
         {/* Search input */}
         <div className="relative flex-1 min-w-[200px] max-w-sm">

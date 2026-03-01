@@ -1,36 +1,45 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg-primary: #050508;
-  --color-bg-secondary: #0A0A0F;
-  --color-bg-tertiary: #0F0F18;
-  --color-bg-hover: #141420;
-  --color-bg-active: #1A1A2E;
+  /* NERV terminal palette */
+  --color-bg-primary:   #0a0a0a;
+  --color-bg-secondary: #111111;
+  --color-bg-tertiary:  #161616;
+  --color-bg-hover:     #ff6b0022;
+  --color-bg-active:    #ff6b0033;
 
-  --color-border-subtle: #1A1A2E;
-  --color-border-default: #2A2A3E;
-  --color-border-strong: #3A3A4E;
+  --color-border-subtle:  #ff6b0055;
+  --color-border-default: #ff8c0088;
+  --color-border-strong:  #ff8c00;
 
-  --color-text-primary: #E8E8F0;
-  --color-text-secondary: #8888A0;
-  --color-text-tertiary: #55556A;
+  --color-text-primary:   #ff8c00;
+  --color-text-secondary: #ff6b00aa;
+  --color-text-tertiary:  #ff6b0066;
 
-  --color-accent: #00F0FF;
-  --color-accent-muted: #00F0FF33;
-  --color-accent-bg: #00F0FF0A;
+  /* Keep accent mapped to amber */
+  --color-accent:     #ff6b00;
+  --color-accent-muted: #ff6b0044;
+  --color-accent-bg:  #ff6b0011;
 
-  --color-threat-critical: #FF2D55;
-  --color-threat-high: #FF6B2D;
-  --color-threat-medium: #FFB800;
-  --color-threat-low: #34D399;
-  --color-threat-info: #6366F1;
+  /* Threats */
+  --color-threat-critical: #ff2020;
+  --color-threat-high:     #ff2020;
+  --color-threat-medium:   #ff6b00;
+  --color-threat-low:      #33ff33;
+  --color-threat-info:     #33ff3388;
 
-  --color-status-online: #00FF88;
-  --color-status-warning: #FFB800;
-  --color-status-error: #FF2D55;
+  /* Status */
+  --color-status-online:  #33ff33;
+  --color-status-warning: #ff6b00;
+  --color-status-error:   #ff2020;
 
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
-  --font-display: 'Space Grotesk', 'Inter', sans-serif;
+  /* Green for grids/axes */
+  --color-green:      #33ff33;
+  --color-green-dim:  #33ff3344;
+  --color-green-grid: #1a3a1a;
+
+  --font-mono: 'Courier New', 'SF Mono', monospace;
+  --font-display: 'Courier New', monospace;
 }
 
 * {
@@ -47,87 +56,170 @@ body {
   font-family: var(--font-mono);
   background: var(--color-bg-primary);
   color: var(--color-text-primary);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  font-weight: 600;
+  font-size: 13px;
+  -webkit-font-smoothing: none;
+  letter-spacing: 0.03em;
   overflow-x: hidden;
+  text-shadow: 0 0 8px #ff6b0055;
 }
 
-/* Scanline overlay */
+/* NERV uppercase — headers, labels, nav only */
+h1, h2, h3, h4,
+.overline,
+.panel-header,
+nav,
+button,
+th {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+/* ── Scanline overlay ───────────────────────────────────────────────────── */
 body::after {
   content: '';
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
+  top: 0; left: 0; right: 0; bottom: 0;
   background: repeating-linear-gradient(
     0deg,
     transparent,
-    transparent 1px,
-    rgba(0, 0, 0, 0.015) 1px,
-    rgba(0, 0, 0, 0.015) 2px
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
   );
   pointer-events: none;
   z-index: 9999;
 }
 
-/* Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: var(--color-bg-primary);
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--color-border-default);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--color-border-strong);
-}
+/* ── Scrollbar ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: #0a0a0a; }
+::-webkit-scrollbar-thumb { background: #ff6b0044; }
+::-webkit-scrollbar-thumb:hover { background: #ff6b00; }
 
 ::selection {
-  background: rgba(0, 240, 255, 0.2);
-  color: #fff;
+  background: #ff6b0033;
+  color: #ff6b00;
 }
 
-/* Overline utility */
+/* ── Overline utility ───────────────────────────────────────────────────── */
 .overline {
   font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
   text-transform: uppercase;
   color: var(--color-text-secondary);
 }
 
-/* Shimmer animation for skeletons */
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+/* ── Panel — NERV corner-bracket container ──────────────────────────────── */
+.panel {
+  position: relative;
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border-default);
+  padding: 16px;
 }
 
+/* Corner brackets */
+.panel::before,
+.panel::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: #ff6b0088;
+  border-style: solid;
+}
+.panel::before {
+  top: -1px; left: -1px;
+  border-width: 2px 0 0 2px;
+}
+.panel::after {
+  bottom: -1px; right: -1px;
+  border-width: 0 2px 2px 0;
+}
+
+/* Inner span for the remaining two corners */
+.panel > .panel-corners::before,
+.panel > .panel-corners::after {
+  content: '';
+  position: absolute;
+  width: 12px;
+  height: 12px;
+  border-color: #ff6b0088;
+  border-style: solid;
+}
+.panel > .panel-corners::before {
+  top: -1px; right: -1px;
+  border-width: 2px 2px 0 0;
+}
+.panel > .panel-corners::after {
+  bottom: -1px; left: -1px;
+  border-width: 0 0 2px 2px;
+}
+
+/* Panel header label */
+.panel-header {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border-default);
+  padding: 2px 8px;
+  margin-bottom: 12px;
+}
+
+/* ── Status dot animations ──────────────────────────────────────────────── */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.1; }
+}
+@keyframes pulse-alert {
+  0%, 100% { box-shadow: 0 0 0 0 #ff202044; }
+  50%       { box-shadow: 0 0 8px 4px #ff202044; }
+}
+
+.blink     { animation: blink 1s ease-in-out infinite; }
+.pulse-dot { animation: blink 1s ease-in-out infinite; }
+.pulse-alert { animation: pulse-alert 2s ease-in-out infinite; }
+
+/* ── Skeleton ───────────────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
 .skeleton {
   background: linear-gradient(
     90deg,
-    var(--color-bg-tertiary) 25%,
-    rgba(0, 240, 255, 0.03) 50%,
-    var(--color-bg-tertiary) 75%
+    #111111 25%,
+    #ff6b0011 50%,
+    #111111 75%
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
-  border-radius: 4px;
 }
 
-/* Pulse animation for status dots */
-@keyframes pulse-dot {
+/* ── Terminal output text ───────────────────────────────────────────────── */
+.terminal-text {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: #33ff33;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  line-height: 1.6;
+}
+
+/* ── Cursor blink ───────────────────────────────────────────────────────── */
+@keyframes cursor-blink {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  50%       { opacity: 0; }
 }
-
-.pulse-dot {
-  animation: pulse-dot 2s ease-in-out infinite;
+.cursor::after {
+  content: '█';
+  color: #33ff33;
+  animation: cursor-blink 1s step-end infinite;
+  margin-left: 2px;
 }

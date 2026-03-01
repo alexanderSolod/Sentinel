@@ -291,15 +291,21 @@ export default function CaseDetail() {
       {/* ------------------------------------------------------------------ */}
       <Card title="AI Analysis">
         <div className="space-y-4">
-          {/* XAI Narrative */}
+          {/* XAI Narrative — terminal style */}
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Brain size={14} className="text-accent" />
-              <span className="overline">Narrative</span>
-            </div>
-            <p className="font-mono text-xs text-text-secondary leading-relaxed">
+            <div style={{
+              fontFamily: 'Courier New, monospace',
+              fontSize: 10,
+              letterSpacing: '0.15em',
+              color: '#33ff3388',
+              border: '1px solid #33ff3333',
+              padding: '2px 8px',
+              display: 'inline-block',
+              marginBottom: 10,
+            }}>┃ MAGISTRAL REASONING ENGINE ┃</div>
+            <p className="terminal-text cursor" style={{ fontSize: 12, lineHeight: 1.7 }}>
               {anomaly?.xai_narrative ?? sentinelCase.xai_summary ?? (
-                <span className="text-text-tertiary">No narrative available</span>
+                <span style={{ color: '#33ff3344' }}>// no output — run pipeline to generate</span>
               )}
             </p>
           </div>

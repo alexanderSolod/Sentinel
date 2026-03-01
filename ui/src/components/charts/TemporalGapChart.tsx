@@ -15,12 +15,12 @@ interface TimelineEvent {
   source?: string;
 }
 
-const TRADE_COLOR = '#00F0FF';
-const OSINT_COLOR = '#FF6B2D';
-const NEWS_COLOR = '#FF2D55';
-const GAP_SUSPICIOUS = '#FF2D5520';
-const GAP_SAFE = '#34D39920';
-const TIMELINE_COLOR = '#2A2A3E';
+const TRADE_COLOR = '#ff8c00';
+const OSINT_COLOR = '#33ff33';
+const NEWS_COLOR = '#ff8c00';
+const GAP_SUSPICIOUS = '#ff202033';
+const GAP_SAFE = '#33ff3322';
+const TIMELINE_COLOR = '#33ff3366';
 
 const SUSPICIOUS_CLASSIFICATIONS = ['INSIDER', 'OSINT_EDGE'];
 
@@ -153,7 +153,7 @@ export default function TemporalGapChart({ evidence, classification }: Props) {
         <div className="text-center mb-3">
           <span
             className="font-mono text-lg font-bold"
-            style={{ color: tradeBeforeNews ? NEWS_COLOR : '#34D399' }}
+            style={{ color: tradeBeforeNews ? '#ff2020' : '#33ff33', textShadow: tradeBeforeNews ? '0 0 8px #ff202066' : '0 0 8px #33ff3366' }}
           >
             {gapHoursWhole > 0 ? `${gapHoursWhole}h ` : ''}
             {gapMinutes}m{' '}
@@ -192,9 +192,9 @@ export default function TemporalGapChart({ evidence, classification }: Props) {
               x={xScale(t)}
               y={centerY + 22}
               textAnchor="middle"
-              fill="#55556A"
+              fill="#33ff3399"
               fontSize={10}
-              fontFamily="'JetBrains Mono', monospace"
+              fontFamily="Courier New, monospace"
             >
               {t === 0 ? '0' : `${t > 0 ? '+' : '-'}${formatTickLabel(t)}`}
             </text>
@@ -274,7 +274,7 @@ export default function TemporalGapChart({ evidence, classification }: Props) {
                   textAnchor="middle"
                   fill={OSINT_COLOR}
                   fontSize={9}
-                  fontFamily="'JetBrains Mono', monospace"
+                  fontFamily="Courier New, monospace"
                 >
                   {e.source ?? 'OSINT'}
                 </text>
@@ -305,7 +305,7 @@ export default function TemporalGapChart({ evidence, classification }: Props) {
                   textAnchor="middle"
                   fill={NEWS_COLOR}
                   fontSize={9}
-                  fontFamily="'JetBrains Mono', monospace"
+                  fontFamily="Courier New, monospace"
                 >
                   NEWS
                 </text>
@@ -344,7 +344,7 @@ export default function TemporalGapChart({ evidence, classification }: Props) {
                   fill={TRADE_COLOR}
                   fontSize={10}
                   fontWeight={600}
-                  fontFamily="'JetBrains Mono', monospace"
+                  fontFamily="Courier New, monospace"
                 >
                   TRADE
                 </text>
@@ -356,9 +356,9 @@ export default function TemporalGapChart({ evidence, classification }: Props) {
         <text
           x={marginLeft}
           y={svgHeight - 6}
-          fill="#55556A"
+          fill="#33ff3399"
           fontSize={9}
-          fontFamily="'JetBrains Mono', monospace"
+          fontFamily="Courier New, monospace"
         >
           &larr; Earlier
         </text>
@@ -366,9 +366,9 @@ export default function TemporalGapChart({ evidence, classification }: Props) {
           x={svgWidth - marginRight}
           y={svgHeight - 6}
           textAnchor="end"
-          fill="#55556A"
+          fill="#33ff3399"
           fontSize={9}
-          fontFamily="'JetBrains Mono', monospace"
+          fontFamily="Courier New, monospace"
         >
           Later &rarr;
         </text>

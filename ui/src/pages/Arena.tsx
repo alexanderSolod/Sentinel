@@ -4,6 +4,7 @@ import { Users, ThumbsUp, ThumbsDown, HelpCircle } from 'lucide-react';
 import { useIndex, useSubmitVote, useCaseDetail } from '../api/hooks.ts';
 import type { VoteValue, SentinelCase } from '../api/types.ts';
 import Card from '../components/ui/Card.tsx';
+import Select from '../components/ui/Select.tsx';
 import ClassificationBadge from '../components/ui/ClassificationBadge.tsx';
 import ScoreBar from '../components/ui/ScoreBar.tsx';
 import Skeleton from '../components/ui/Skeleton.tsx';
@@ -139,24 +140,17 @@ export default function Arena() {
         {casesLoading ? (
           <Skeleton className="h-9 w-64" />
         ) : (
-          <select
+          <Select
             value={activeCaseId ?? ''}
-            onChange={(e) => {
-              setSelectedCaseId(e.target.value);
-              setConfirmationMsg(null);
-            }}
-            className="bg-bg-tertiary border border-border-subtle rounded px-3 py-2 font-mono text-sm text-text-primary focus:outline-none focus:border-accent transition-colors cursor-pointer min-w-[320px]"
-          >
-            {cases.map((c: SentinelCase) => (
-              <option key={c.case_id} value={c.case_id}>
-                {c.market_name
-                  ? c.market_name.length > 50
-                    ? c.market_name.slice(0, 50) + '...'
-                    : c.market_name
-                  : c.case_id.slice(0, 12)}
-              </option>
-            ))}
-          </select>
+            onChange={(v) => { setSelectedCaseId(v); setConfirmationMsg(null); }}
+            options={cases.map((c: SentinelCase) => ({
+              value: c.case_id,
+              label: c.market_name
+                ? c.market_name.length > 50 ? c.market_name.slice(0, 50) + '...' : c.market_name
+                : c.case_id.slice(0, 12),
+            }))}
+            className="min-w-[320px]"
+          />
         )}
       </div>
 

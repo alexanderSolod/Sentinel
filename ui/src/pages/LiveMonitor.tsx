@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Select from '../components/ui/Select.tsx';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -162,17 +163,11 @@ export default function LiveMonitor() {
         <Card title="RECENT ANOMALIES">
           {/* Filter */}
           <div className="mb-4">
-            <select
+            <Select
               value={classFilter}
-              onChange={(e) => setClassFilter(e.target.value)}
-              className="bg-bg-tertiary border border-border-subtle rounded px-3 py-1.5 font-mono text-xs text-text-primary focus:outline-none focus:border-accent transition-colors cursor-pointer"
-            >
-              {FILTER_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+              onChange={setClassFilter}
+              options={FILTER_OPTIONS as unknown as { value: string; label: string }[]}
+            />
           </div>
 
           {/* Anomaly rows */}
