@@ -1,0 +1,38 @@
+# Environment
+.env
+.env.*
+!.env.template
+
+# Database
+data/sentinel.db
+data/sentinel.db-wal
+data/sentinel.db-shm
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ChromaDB
+data/chroma/
+
+# Fine-tuning data
+data/finetuning/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Pytest
+.pytest_cache/
+
+# W&B
+wandb/
