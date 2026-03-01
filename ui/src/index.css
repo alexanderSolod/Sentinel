@@ -212,6 +212,67 @@ body::after {
   line-height: 1.6;
 }
 
+/* ── Markdown inside terminal ───────────────────────────────────────────── */
+.prose-terminal {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: #33ff33;
+  line-height: 1.7;
+}
+.prose-terminal h1,
+.prose-terminal h2,
+.prose-terminal h3 {
+  color: #33ff33;
+  font-weight: 700;
+  margin-top: 1.2em;
+  margin-bottom: 0.4em;
+  border-bottom: 1px solid #33ff3322;
+  padding-bottom: 0.3em;
+}
+.prose-terminal h1 { font-size: 16px; }
+.prose-terminal h2 { font-size: 14px; }
+.prose-terminal h3 { font-size: 13px; }
+.prose-terminal p {
+  margin-bottom: 0.7em;
+}
+.prose-terminal strong {
+  color: #66ff66;
+  font-weight: 700;
+}
+.prose-terminal em {
+  color: #33ff33cc;
+  font-style: italic;
+}
+.prose-terminal ul,
+.prose-terminal ol {
+  padding-left: 1.5em;
+  margin-bottom: 0.7em;
+}
+.prose-terminal li {
+  margin-bottom: 0.3em;
+}
+.prose-terminal li::marker {
+  color: #33ff3366;
+}
+.prose-terminal code {
+  background: #33ff3311;
+  border: 1px solid #33ff3322;
+  padding: 1px 4px;
+  border-radius: 2px;
+  font-size: 11px;
+}
+.prose-terminal blockquote {
+  border-left: 2px solid #33ff3344;
+  padding-left: 0.8em;
+  color: #33ff33aa;
+  margin: 0.5em 0;
+}
+.prose-terminal hr {
+  border: none;
+  border-top: 1px solid #33ff3322;
+  margin: 1em 0;
+}
+
 /* ── Cursor blink ───────────────────────────────────────────────────────── */
 @keyframes cursor-blink {
   0%, 100% { opacity: 1; }

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import Markdown from 'react-markdown';
 import {
   ArrowLeft,
   Clock,
@@ -303,11 +304,15 @@ export default function CaseDetail() {
               display: 'inline-block',
               marginBottom: 10,
             }}>┃ MAGISTRAL REASONING ENGINE ┃</div>
-            <p className="terminal-text cursor" style={{ fontSize: 12, lineHeight: 1.7 }}>
-              {anomaly?.xai_narrative ?? sentinelCase.xai_summary ?? (
+            {(anomaly?.xai_narrative ?? sentinelCase.xai_summary) ? (
+              <div className="terminal-text prose-terminal max-h-[500px] overflow-y-auto">
+                <Markdown>{anomaly?.xai_narrative ?? sentinelCase.xai_summary ?? ''}</Markdown>
+              </div>
+            ) : (
+              <p className="terminal-text" style={{ fontSize: 12, lineHeight: 1.7 }}>
                 <span style={{ color: '#33ff3344' }}>// no output — run pipeline to generate</span>
-              )}
-            </p>
+              </p>
+            )}
           </div>
 
           {/* RF Analysis */}
