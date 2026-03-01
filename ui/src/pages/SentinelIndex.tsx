@@ -260,15 +260,16 @@ export default function SentinelIndex() {
                     <td className="px-5 py-3 font-mono text-xs text-accent">
                       {c.case_id.slice(0, 8)}
                     </td>
-                    <td
-                      className="px-3 py-3 font-mono text-xs text-text-secondary max-w-[220px] truncate"
-                      title={c.market_name ?? ''}
-                    >
-                      {c.market_name
-                        ? c.market_name.length > 30
-                          ? c.market_name.slice(0, 30) + '...'
-                          : c.market_name
-                        : '—'}
+                    <td className="px-3 py-3 font-mono text-xs text-text-secondary max-w-[220px]">
+                      {c.market_name && c.market_name.length > 30 ? (
+                        <Tooltip content={c.market_name} position="bottom">
+                          <span className="truncate block max-w-[220px] cursor-help">
+                            {c.market_name.slice(0, 30) + '...'}
+                          </span>
+                        </Tooltip>
+                      ) : (
+                        <span>{c.market_name ?? '—'}</span>
+                      )}
                     </td>
                     <td className="px-3 py-3">
                       <ClassificationBadge

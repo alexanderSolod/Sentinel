@@ -19,6 +19,7 @@ import WalletAddress from '../components/ui/WalletAddress.tsx';
 import Skeleton from '../components/ui/Skeleton.tsx';
 import { formatRelativeTime, formatNumber } from '../lib/formatters.ts';
 import { SCORE_DEFINITIONS } from '../lib/scoreDefinitions.ts';
+import Tooltip from '../components/ui/Tooltip.tsx';
 
 // ---------------------------------------------------------------------------
 // KPI metric card
@@ -162,6 +163,11 @@ export default function LiveMonitor() {
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
         {/* ---- Anomaly Feed ---- */}
         <Card title="RECENT ANOMALIES">
+          <p className="font-mono text-xs text-text-tertiary mb-4 leading-relaxed" style={{ textTransform: 'none' }}>
+            Trades flagged by statistical detection — volume spikes, price jumps, or fresh wallets
+            acting on prediction markets. Each entry is classified by the AI pipeline and scored
+            for suspicion (BSS) and public explainability (PES). Click any row to inspect the full case.
+          </p>
           {/* Filter */}
           <div className="mb-4">
             <Select
@@ -196,16 +202,17 @@ export default function LiveMonitor() {
                   {/* Top row: badge + market + timestamp */}
                   <div className="flex items-center gap-3 mb-2">
                     <ClassificationBadge classification={anomaly.classification} size="sm" />
-                    <span
-                      className="font-mono text-sm text-text-primary truncate flex-1"
-                      title={anomaly.market_name ?? ''}
-                    >
-                      {anomaly.market_name
-                        ? anomaly.market_name.length > 40
-                          ? anomaly.market_name.slice(0, 40) + '...'
-                          : anomaly.market_name
-                        : 'Unknown Market'}
-                    </span>
+                    {anomaly.market_name && anomaly.market_name.length > 40 ? (
+                      <Tooltip content={anomaly.market_name} position="bottom">
+                        <span className="font-mono text-sm text-text-primary truncate flex-1 cursor-help">
+                          {anomaly.market_name.slice(0, 40) + '...'}
+                        </span>
+                      </Tooltip>
+                    ) : (
+                      <span className="font-mono text-sm text-text-primary truncate flex-1">
+                        {anomaly.market_name ?? 'Unknown Market'}
+                      </span>
+                    )}
                     <span className="font-mono text-xs text-text-tertiary whitespace-nowrap">
                       {formatRelativeTime(anomaly.timestamp)}
                     </span>
@@ -229,6 +236,11 @@ export default function LiveMonitor() {
 
         {/* ---- Evidence Packets ---- */}
         <Card title="EVIDENCE PACKETS">
+          <p className="font-mono text-xs text-text-tertiary mb-4 leading-relaxed" style={{ textTransform: 'none' }}>
+            Per-wallet forensic evidence linking flagged trades to cases. Each packet captures the
+            wallet's risk profile, the temporal gap between trade and public news (gap score),
+            and an overall correlation score combining wallet behavior, cluster analysis, and OSINT timing.
+          </p>
           <div className="overflow-x-auto -mx-5">
             <table className="w-full min-w-[600px]">
               <thead>
@@ -269,15 +281,16 @@ export default function LiveMonitor() {
                       <td className="px-5 py-2.5 font-mono text-xs text-accent">
                         {ep.case_id.slice(0, 8)}
                       </td>
-                      <td
-                        className="px-3 py-2.5 font-mono text-xs text-text-secondary truncate max-w-[180px]"
-                        title={ep.market_name ?? ''}
-                      >
-                        {ep.market_name
-                          ? ep.market_name.length > 25
-                            ? ep.market_name.slice(0, 25) + '...'
-                            : ep.market_name
-                          : '—'}
+                      <td className="px-3 py-2.5 font-mono text-xs text-text-secondary max-w-[180px]">
+                        {ep.market_name && ep.market_name.length > 25 ? (
+                          <Tooltip content={ep.market_name} position="bottom">
+                            <span className="truncate block max-w-[180px] cursor-help">
+                              {ep.market_name.slice(0, 25) + '...'}
+                            </span>
+                          </Tooltip>
+                        ) : (
+                          <span>{ep.market_name ?? '—'}</span>
+                        )}
                       </td>
                       <td className="px-3 py-2.5">
                         <WalletAddress address={ep.wallet_address} />
