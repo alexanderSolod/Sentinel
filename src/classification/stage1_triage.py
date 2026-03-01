@@ -14,6 +14,12 @@ import logging
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
 
+try:
+    import weave
+    _weave_op = weave.op()
+except Exception:
+    _weave_op = lambda f: f
+
 logger = logging.getLogger(__name__)
 
 
@@ -63,6 +69,8 @@ IMPORTANT RULES:
 - If hours_before_news is positive and osint_signals_before_trade > 0, lean toward OSINT_EDGE
 - If hours_before_news is very small and positive (0 <= x < 0.1), it's likely FAST_REACTOR
 - Fresh wallets (< 7 days, < 5 trades) are suspicious
+- Higher rf_suspicion_score (0-1) should raise BSS when other signals agree
+- Higher game_theory_score (0-100) should raise suspicion confidence
 - Always output valid JSON
 
 """ + FEW_SHOT_EXAMPLES
@@ -73,6 +81,7 @@ IMPORTANT RULES:
 FINETUNED_MODEL_ID = os.getenv("SENTINEL_FINETUNED_MODEL", None)
 
 
+@_weave_op
 def classify_anomaly(
     anomaly: Dict[str, Any],
     api_key: Optional[str] = None,
@@ -120,6 +129,15 @@ def classify_anomaly(
         "hours_before_news": anomaly.get("hours_before_news"),
         "osint_signals_before_trade": anomaly.get("osint_signals_before_trade", 0),
         "z_score": anomaly.get("z_score", 1.0),
+        # Extended context (optional, may be absent in historical records)
+        "wallet_win_rate": anomaly.get("wallet_win_rate"),
+        "position_size_pct": anomaly.get("position_size_pct"),
+        "is_fresh_wallet": anomaly.get("is_fresh_wallet"),
+        "cluster_member": anomaly.get("cluster_member"),
+        "funding_risk": anomaly.get("funding_risk"),
+        "rf_suspicion_score": anomaly.get("rf_suspicion_score", anomaly.get("rf_score")),
+        "game_theory_score": anomaly.get("game_theory_score"),
+        "entropy_anomaly": anomaly.get("entropy_anomaly"),
     }
 
     user_prompt = f"Classify this trading anomaly:\nInput: {json.dumps(input_data)}\nOutput:"
@@ -170,11 +188,21 @@ def _classify_with_rules(anomaly: Dict[str, Any]) -> TriageResult:
     wallet_trades = anomaly.get("wallet_trades", 10)
     hours_before_news = anomaly.get("hours_before_news")
     osint_signals = anomaly.get("osint_signals_before_trade", 0)
+    rf_score = anomaly.get("rf_suspicion_score", anomaly.get("rf_score", 0.0)) or 0.0
+    gt_score = anomaly.get("game_theory_score", 0.0) or 0.0
     if hours_before_news is not None:
         try:
             hours_before_news = float(hours_before_news)
         except (TypeError, ValueError):
             hours_before_news = None
+    try:
+        rf_score = float(rf_score)
+    except (TypeError, ValueError):
+        rf_score = 0.0
+    try:
+        gt_score = float(gt_score)
+    except (TypeError, ValueError):
+        gt_score = 0.0
     # Fresh wallet indicators
     is_fresh_wallet = wallet_age < 7 and wallet_trades < 5
 
@@ -190,7 +218,14 @@ def _classify_with_rules(anomaly: Dict[str, Any]) -> TriageResult:
     elif hours_before_news < -2 and osint_signals == 0:
         # Trade significantly before news with no public signals
         classification = "INSIDER"
-        bss_score = min(95, 60 + abs(hours_before_news) * 3 + (20 if is_fresh_wallet else 0))
+        bss_score = min(
+            98,
+            60
+            + abs(hours_before_news) * 3
+            + (20 if is_fresh_wallet else 0)
+            + int(rf_score * 10)
+            + int(gt_score / 20),
+        )
         pes_score = max(5, 30 - abs(hours_before_news) * 2)
         confidence = 0.85 + (0.1 if is_fresh_wallet else 0)
         reasoning = f"Trade placed {abs(hours_before_news):.1f} hours before news with no public signals."
@@ -212,6 +247,15 @@ def _classify_with_rules(anomaly: Dict[str, Any]) -> TriageResult:
         pes_score = min(95, 60 + osint_signals * 10)
         confidence = 0.85
         reasoning = f"Trade placed after {osint_signals} public signals. Legitimate research edge."
+    elif rf_score >= 0.8 and gt_score >= 60:
+        classification = "INSIDER"
+        bss_score = min(96, 70 + int(rf_score * 20) + int(gt_score / 10))
+        pes_score = max(10, 45 - int(gt_score / 4))
+        confidence = min(0.95, 0.75 + rf_score * 0.2)
+        reasoning = (
+            "High model-driven risk consensus: RF suspicion score "
+            f"{rf_score:.2f} and game-theory score {gt_score:.1f}/100."
+        )
 
     else:
         # Edge cases

@@ -403,7 +403,7 @@ def submit_finetuning_job(
     train_path: Path,
     val_path: Path,
     api_key: Optional[str] = None,
-    model: str = "mistral-small-latest",
+    model: str = "open-mistral-nemo",
     suffix: str = "sentinel-v1",
     training_steps: int = 100,
     learning_rate: float = 1e-4,

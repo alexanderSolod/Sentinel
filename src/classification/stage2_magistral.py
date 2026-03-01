@@ -13,6 +13,12 @@ import logging
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
 
+try:
+    import weave
+    _weave_op = weave.op()
+except Exception:
+    _weave_op = lambda f: f
+
 logger = logging.getLogger(__name__)
 
 
@@ -54,6 +60,7 @@ Be thorough, objective, and evidence-based. Your analysis will be used to build 
 """
 
 
+@_weave_op
 def analyze_case(
     anomaly: Dict[str, Any],
     triage_result: Dict[str, Any],
@@ -141,6 +148,25 @@ def _build_analysis_prompt(
 - **Initial Reasoning**: {triage_result.get('reasoning', 'None')}
 
 """
+
+    # Add research-model context when available.
+    rf = anomaly.get("rf_analysis") or {}
+    gt = anomaly.get("game_theory_analysis") or {}
+    if rf or gt:
+        prompt += "\n## Research Model Signals\n"
+    if rf:
+        prompt += (
+            f"- **RF Suspicion Score**: {rf.get('rf_score', 'N/A')} ({rf.get('rf_label', 'N/A')})\n"
+            f"- **RF Confidence**: {rf.get('confidence', 'N/A')}\n"
+            f"- **Top RF Features**: {rf.get('top_features', [])}\n"
+        )
+    if gt:
+        prompt += (
+            f"- **Game Theory Score**: {gt.get('game_theory_suspicion_score', 'N/A')}/100\n"
+            f"- **Best-fit Player Type**: {gt.get('best_fit_type', 'N/A')}\n"
+            f"- **Entropy Anomaly**: {gt.get('entropy_anomaly', 'N/A')}\n"
+            f"- **Pattern Confidence**: {gt.get('pattern_confidence', 'N/A')}\n"
+        )
 
     if osint_context:
         prompt += "\n## OSINT Context (signals found near trade time)\n"

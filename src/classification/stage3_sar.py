@@ -11,6 +11,12 @@ from datetime import datetime
 from typing import Dict, Any, Optional
 from dataclasses import dataclass
 
+try:
+    import weave
+    _weave_op = weave.op()
+except Exception:
+    _weave_op = lambda f: f
+
 logger = logging.getLogger(__name__)
 
 
@@ -50,6 +56,7 @@ Be formal, objective, and evidence-based. Avoid speculation beyond the evidence.
 """
 
 
+@_weave_op
 def generate_sar(
     anomaly: Dict[str, Any],
     triage_result: Dict[str, Any],

@@ -242,14 +242,20 @@ def _pipeline_mock():
 
 
 def _pipeline_live():
-    """Fetch live market data, detect anomalies, and classify."""
+    """Fetch live market data, gather OSINT from ALL sources, and classify."""
+    import math
+    import time as _time
+    import os
     from datetime import datetime, timezone
     from src.data.database import init_schema
     from src.data.polymarket_client import PolymarketClient
-    from src.detection.anomaly_detector import AnomalyDetector, WalletProfile
+    from src.osint.rss_aggregator import RSSAggregator
+    from src.osint.sources import GDELTClient, GDACSClient, ACLEDClient, FIRMSClient
     from src.osint.vector_store import VectorStore
     from src.osint.correlator import MarketCorrelator
     from src.classification.pipeline import SentinelPipeline
+
+    DELAY = 3  # seconds between external API calls to avoid rate limits
 
     print("=" * 60)
     print("SENTINEL PIPELINE - LIVE MODE")
@@ -257,25 +263,147 @@ def _pipeline_live():
 
     init_schema()
 
-    # Initialize components
     polymarket = PolymarketClient()
-    detector = AnomalyDetector()
     store = VectorStore()
     correlator = MarketCorrelator(vector_store=store)
-    pipeline = SentinelPipeline(skip_low_suspicion=True)
+    pipeline = SentinelPipeline(skip_low_suspicion=False)
 
-    # Fetch top markets by volume
-    print("\n[1/4] Fetching active markets from Polymarket...")
+    # =========================================================
+    # 1. Fetch top markets by volume
+    # =========================================================
+    print("\n[1/5] Fetching active markets from Polymarket...")
     try:
         markets = polymarket.get_markets(limit=20, order="volume24hr")
         print(f"   Fetched {len(markets)} markets")
     except Exception as e:
         print(f"   Failed to fetch markets: {e}")
-        print("   Tip: Polymarket API may be rate-limited or unavailable")
         return
 
-    # Scan each market for anomalies
-    print("\n[2/4] Scanning for anomalies...")
+    # =========================================================
+    # 2. Gather OSINT from ALL sources (RSS first — most reliable)
+    # =========================================================
+    print("\n[2/5] Gathering OSINT signals from all sources...")
+    all_osint = []
+
+    # --- RSS feeds: Reuters, AP, BBC, Bloomberg, ESPN, etc. ---
+    # Most reliable source — no API key, no rate limits
+    print("   --- RSS Feeds (primary) ---")
+    rss = RSSAggregator()
+    try:
+        rss_items = rss.fetch_all(max_age_hours=72)
+        if rss_items:
+            # Convert NewsItem objects to dicts for the vector store
+            for item in rss_items:
+                osint_dict = {
+                    "event_id": f"rss-{item.item_id}" if hasattr(item, "item_id") else f"rss-{hash(item.title) & 0xFFFFFFFF:08x}",
+                    "title": item.title,
+                    "description": getattr(item, "summary", "") or getattr(item, "description", "") or item.title,
+                    "source": f"RSS:{item.source}",
+                    "category": getattr(item, "category", "NEWS"),
+                    "threat_level": "INFO",
+                    "url": getattr(item, "url", getattr(item, "link", "")),
+                    "timestamp": item.published.isoformat() if hasattr(item, "published") and item.published else datetime.now(timezone.utc).isoformat(),
+                }
+                all_osint.append(osint_dict)
+            print(f"   RSS [all feeds]: {len(rss_items)} articles")
+    except Exception as e:
+        print(f"   RSS [all feeds]: failed ({e})")
+
+    # --- GDELT: intelligence topics (may rate-limit) ---
+    print("   --- GDELT (intelligence topics) ---")
+    gdelt = GDELTClient()
+    gdelt_topics = ["military", "sanctions", "nuclear"]
+    for topic in gdelt_topics:
+        try:
+            _time.sleep(DELAY)
+            events = gdelt.search_topic(topic, timespan="72h", max_records=15)
+            if events:
+                all_osint.extend(events)
+                print(f"   GDELT [{topic}]: {len(events)} events")
+        except Exception as e:
+            print(f"   GDELT [{topic}]: unavailable ({type(e).__name__})")
+
+    # --- GDELT: market-specific queries ---
+    stop_words = {"will", "what", "does", "this", "that", "have", "been",
+                  "before", "after", "next", "2026", "2025", "february",
+                  "march", "january", "from", "the", "win", "2026?"}
+    seen_keywords = set()
+    for market in markets[:6]:
+        name = market.get("question", market.get("title", ""))
+        words = [w.strip("?") for w in name.split()
+                 if len(w) > 3 and w.lower().strip("?") not in stop_words]
+        query = " ".join(words[:3])
+        if not query or query in seen_keywords:
+            continue
+        seen_keywords.add(query)
+        try:
+            _time.sleep(DELAY)
+            events = gdelt.search_documents(query, max_records=10, timespan="72h")
+            if events:
+                all_osint.extend(events)
+                print(f"   GDELT [{query[:35]:35s}]: {len(events)} events")
+        except Exception as e:
+            print(f"   GDELT [{query[:35]:35s}]: unavailable ({type(e).__name__})")
+
+    # --- GDACS: disaster alerts (no key needed) ---
+    print("   --- GDACS (disasters) ---")
+    gdacs = GDACSClient()
+    try:
+        _time.sleep(DELAY)
+        gdacs_events = gdacs.get_events(min_alert_level="green")
+        if gdacs_events:
+            all_osint.extend(gdacs_events)
+            print(f"   GDACS [disasters]: {len(gdacs_events)} events")
+        else:
+            print(f"   GDACS [disasters]: 0 events")
+    except Exception as e:
+        print(f"   GDACS [disasters]: unavailable ({type(e).__name__})")
+
+    # --- ACLED: armed conflict (needs token) ---
+    print("   --- ACLED (conflict) ---")
+    acled_token = os.getenv("ACLED_ACCESS_TOKEN")
+    if acled_token:
+        acled = ACLEDClient(acled_token)
+        try:
+            _time.sleep(DELAY)
+            acled_events = acled.get_events(days=7, limit=50)
+            if acled_events:
+                all_osint.extend(acled_events)
+                print(f"   ACLED [conflict]: {len(acled_events)} events")
+        except Exception as e:
+            print(f"   ACLED [conflict]: unavailable ({type(e).__name__})")
+    else:
+        print("   ACLED [conflict]: skipped (no ACLED_ACCESS_TOKEN)")
+
+    # --- NASA FIRMS: fire detections (needs key) ---
+    print("   --- NASA FIRMS (fires) ---")
+    firms_key = os.getenv("NASA_FIRMS_API_KEY")
+    if firms_key:
+        firms = FIRMSClient(firms_key)
+        try:
+            _time.sleep(DELAY)
+            firms_events = firms.get_fires(days=3)
+            if firms_events:
+                all_osint.extend(firms_events)
+                print(f"   FIRMS [fires]: {len(firms_events)} events")
+        except Exception as e:
+            print(f"   FIRMS [fires]: unavailable ({type(e).__name__})")
+    else:
+        print("   FIRMS [fires]: skipped (no NASA_FIRMS_API_KEY)")
+
+    # --- Index all OSINT into vector store ---
+    print(f"\n   Indexing {len(all_osint)} OSINT events into vector store...")
+    if all_osint:
+        _time.sleep(1)
+        added = store.add_osint_objects(all_osint)
+        print(f"   Indexed {added} events in vector store")
+    else:
+        print("   WARNING: No OSINT events gathered from any source")
+
+    # =========================================================
+    # 3. Build anomaly entries from top markets
+    # =========================================================
+    print("\n[3/5] Building market profiles...")
     anomalies = []
     for market in markets:
         market_id = (
@@ -289,7 +417,6 @@ def _pipeline_live():
         if volume < 1000:
             continue
 
-        # Check current market price.
         try:
             prices = polymarket.get_prices(market)
             yes_price = prices.get("yes")
@@ -298,46 +425,79 @@ def _pipeline_live():
         except Exception:
             current_price = 0.5
 
-        signals = detector.detect_all(
-            market_id=market_id,
-            market_name=market_name,
-            current_volume=volume,
-            current_price=current_price,
-        )
+        # Estimate a z-score proxy from price extremity and volume
+        price_extremity = abs(current_price - 0.5) * 2  # 0-1 scale
+        volume_log = math.log10(max(volume, 1))
+        z_proxy = round(price_extremity * 2 + volume_log / 3, 2)
 
-        if signals:
-            for signal in signals:
-                anomaly = {
-                    "market_id": market_id,
-                    "market_name": market_name,
-                    "wallet_address": getattr(signal, "wallet_address", "0x0"),
-                    "wallet_age_days": 30,
-                    "wallet_trades": 10,
-                    "trade_size": volume,
-                    "price_before": current_price,
-                    "price_after": current_price,
-                    "z_score": getattr(signal, "z_score", signal.confidence * 5),
-                    "trade_timestamp": datetime.now(timezone.utc).isoformat(),
-                }
-                anomalies.append(anomaly)
-                print(f"   ANOMALY: {market_name[:50]} | {signal.signal_type} (conf={signal.confidence:.2f})")
+        anomaly = {
+            "market_id": market_id,
+            "market_name": market_name,
+            "wallet_address": "0x_live_scan",
+            "wallet_age_days": 30,
+            "wallet_trades": 10,
+            "trade_size": volume,
+            "price_before": 0.50,
+            "price_after": current_price,
+            "z_score": z_proxy,
+            "market_volume_24h": volume,
+            "trade_timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        anomalies.append(anomaly)
+        print(f"   {market_name[:55]:55s} | price={current_price:.2f} vol=${volume:,.0f} z={z_proxy:.1f}")
 
     if not anomalies:
-        print("   No anomalies detected in current markets")
-        print("   This is normal - anomalies are rare events")
+        print("   No markets with sufficient volume")
         return
 
-    # Correlate with OSINT
-    print(f"\n[3/4] Correlating {len(anomalies)} anomalies with OSINT...")
+    # =========================================================
+    # 4. Correlate with OSINT
+    # =========================================================
+    print(f"\n[4/5] Correlating {len(anomalies)} markets with OSINT ({store.count()} events in store)...")
     enriched = correlator.batch_correlate(anomalies)
+    for a in enriched:
+        sig = a.get("osint_signals_before_trade", 0)
+        pattern = a.get("information_asymmetry", "UNKNOWN")
+        if sig > 0:
+            print(f"   {a['market_name'][:55]:55s} | signals={sig} {pattern}")
 
-    # Classify
-    print("\n[4/4] Running classification pipeline...")
-    results = pipeline.process_batch(enriched, save_to_db=True)
+    # =========================================================
+    # 5. Classify top candidates (limit to 5 to manage API cost)
+    # =========================================================
+    # Sort by OSINT signal count (prefer markets with correlation),
+    # then by z-score as tiebreaker
+    enriched.sort(
+        key=lambda a: (a.get("osint_signals_before_trade", 0), a.get("z_score", 0)),
+        reverse=True,
+    )
+    to_classify = enriched[:5]
 
-    print(f"\nProcessed {len(results)} anomalies in live mode")
+    print(f"\n[5/5] Classifying top {len(to_classify)} markets (with {DELAY}s delay between calls)...")
+    results = []
+    for i, anomaly in enumerate(to_classify, 1):
+        if i > 1:
+            _time.sleep(DELAY)
+        print(f"\n   [{i}/{len(to_classify)}] {anomaly['market_name'][:55]}")
+        sigs = anomaly.get("osint_signals_before_trade", 0)
+        if sigs > 0:
+            print(f"       OSINT signals: {sigs} | {anomaly.get('information_asymmetry', 'UNKNOWN')}")
+        try:
+            result = pipeline.process_anomaly(anomaly, save_to_db=True)
+            results.append(result)
+            print(f"       -> {result.classification} | BSS={result.bss_score} PES={result.pes_score} | conf={result.confidence:.0%}")
+        except Exception as e:
+            print(f"       -> ERROR: {e}")
+
+    print(f"\n{'=' * 60}")
+    print("LIVE PIPELINE RESULTS")
+    print("=" * 60)
     for r in results:
-        print(f"  {r.case_id} | {r.classification} | BSS={r.bss_score}")
+        print(f"  {r.case_id:15s} | {r.classification:15s} | BSS={r.bss_score:3d} PES={r.pes_score:3d} | conf={r.confidence:.0%}")
+        if r.sar_report:
+            print(f"  {'':15s} | SAR report generated")
+
+    print(f"\nProcessed {len(results)} live markets ({len(all_osint)} OSINT events gathered)")
+    store.clear()
 
 
 def _pipeline_backfill():

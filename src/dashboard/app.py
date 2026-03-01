@@ -152,7 +152,9 @@ def show_dashboard():
         list_anomalies,
         list_evidence_packets,
     )
+    import json
     import pandas as pd
+    import plotly.graph_objects as go
     conn = get_connection()
     stats = get_stats(conn)
 
@@ -246,6 +248,43 @@ def show_dashboard():
                 "Correlation": st.column_config.ProgressColumn(min_value=0.0, max_value=1.0, format="%.2f"),
             },
         )
+
+        # Gate funnel from stored evidence packet metadata.
+        gate_order = ["statistical", "rf_classifier", "autoencoder", "game_theory", "mistral"]
+        gate_counts = {gate: 0 for gate in gate_order}
+        dismissal_counts = {gate: 0 for gate in gate_order}
+        for packet in evidence_packets:
+            try:
+                payload = json.loads(packet.get("evidence_json") or "{}")
+            except json.JSONDecodeError:
+                continue
+            gate_eval = payload.get("gate_evaluation", {})
+            gates = gate_eval.get("gates_passed", [])
+            for gate in gates:
+                gate_name = gate.get("gate")
+                if gate_name in gate_counts:
+                    gate_counts[gate_name] += 1
+                    if gate.get("decision") == "DISMISS":
+                        dismissal_counts[gate_name] += 1
+
+        if any(gate_counts.values()):
+            st.subheader("🚦 Gate Funnel")
+            fig_gate = go.Figure(
+                go.Funnel(
+                    y=[g.replace("_", " ").title() for g in gate_order],
+                    x=[gate_counts[g] for g in gate_order],
+                    text=[f"dismissed: {dismissal_counts[g]}" for g in gate_order],
+                    textposition="inside",
+                    marker={"color": ["#4cc9f0", "#4895ef", "#4361ee", "#3a0ca3", "#f72585"]},
+                )
+            )
+            fig_gate.update_layout(
+                height=340,
+                plot_bgcolor='rgba(0,0,0,0)',
+                paper_bgcolor='rgba(0,0,0,0)',
+                font=dict(color='white'),
+            )
+            st.plotly_chart(fig_gate, use_container_width=True)
 
 
 def show_case_detail():
@@ -446,6 +485,32 @@ def show_case_detail():
 
     st.divider()
 
+    # Research-model overlays (RF + game theory), if present in evidence payload.
+    rf_analysis = evidence.get("rf_analysis", {}) if isinstance(evidence, dict) else {}
+    gt_analysis = evidence.get("game_theory_analysis", {}) if isinstance(evidence, dict) else {}
+    if rf_analysis or gt_analysis:
+        st.subheader("🧠 Research Signals")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            rf_score = rf_analysis.get("rf_score")
+            if rf_score is not None:
+                st.metric("RF Suspicion", f"{float(rf_score) * 100:.1f}%")
+            else:
+                st.metric("RF Suspicion", "N/A")
+        with col2:
+            gt_score = gt_analysis.get("game_theory_suspicion_score")
+            if gt_score is not None:
+                st.metric("Game Theory Score", f"{float(gt_score):.1f}/100")
+            else:
+                st.metric("Game Theory Score", "N/A")
+        with col3:
+            player_type = gt_analysis.get("best_fit_type", "N/A")
+            st.metric("Best-fit Player", str(player_type).upper())
+
+        if rf_analysis.get("top_features"):
+            st.caption("Top RF Drivers")
+            st.json(rf_analysis.get("top_features"))
+
     # XAI Narrative
     st.subheader("🤖 AI Analysis")
     if anomaly and anomaly.get('xai_narrative'):
@@ -644,14 +709,17 @@ def show_arena():
 def show_system_health():
     """System health and status."""
     st.title("🏥 System Health")
+    import json
     import pandas as pd
 
-    from src.data.database import get_connection, get_stats
+    from src.data.database import get_connection, get_stats, list_cases, list_evidence_packets
     from src.classification.evaluation import compute_evaluation_metrics
 
     conn = get_connection()
     stats = get_stats(conn)
     eval_metrics = compute_evaluation_metrics(conn)
+    cases = list_cases(conn, limit=500)
+    evidence_packets = list_evidence_packets(conn, limit=300)
     conn.close()
 
     # Status indicators
@@ -713,6 +781,114 @@ def show_system_health():
         for status, count in stats['cases_by_status'].items():
             icon = {"CONFIRMED": "✅", "DISPUTED": "❌", "UNDER_REVIEW": "🔍"}.get(status, "⚪")
             st.text(f"{icon} {status}: {count}")
+
+    # Drift and gate/NLP observability from evidence packets.
+    st.subheader("📉 Model Drift")
+    resolved_cases = [c for c in cases if c.get("status") in {"CONFIRMED", "DISPUTED"}]
+    if resolved_cases:
+        import plotly.express as px
+
+        drift_df = pd.DataFrame(resolved_cases)
+        drift_df["resolved_date"] = pd.to_datetime(drift_df["updated_at"], errors="coerce").dt.date
+        daily = (
+            drift_df.groupby("resolved_date")
+            .agg(
+                confirmed=("status", lambda s: int((s == "CONFIRMED").sum())),
+                disputed=("status", lambda s: int((s == "DISPUTED").sum())),
+            )
+            .reset_index()
+        )
+        daily["resolved"] = daily["confirmed"] + daily["disputed"]
+        daily["consensus_accuracy"] = daily["confirmed"] / daily["resolved"].clip(lower=1)
+
+        fig_drift = px.line(
+            daily,
+            x="resolved_date",
+            y="consensus_accuracy",
+            markers=True,
+            labels={"resolved_date": "Date", "consensus_accuracy": "Consensus Accuracy"},
+            title="Arena Agreement Trend (Proxy for Drift)",
+        )
+        fig_drift.update_yaxes(range=[0, 1])
+        fig_drift.update_layout(
+            height=300,
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='white'),
+        )
+        st.plotly_chart(fig_drift, use_container_width=True)
+    else:
+        st.info("Not enough resolved cases yet for a drift chart.")
+
+    st.subheader("🧭 Gate Throughput")
+    gate_order = ["statistical", "rf_classifier", "autoencoder", "game_theory", "mistral"]
+    gate_counts = {g: 0 for g in gate_order}
+    for packet in evidence_packets:
+        try:
+            payload = json.loads(packet.get("evidence_json") or "{}")
+        except json.JSONDecodeError:
+            continue
+        for gate in payload.get("gate_evaluation", {}).get("gates_passed", []):
+            name = gate.get("gate")
+            if name in gate_counts:
+                gate_counts[name] += 1
+    if any(gate_counts.values()):
+        gate_df = pd.DataFrame(
+            [{"Gate": g.replace("_", " ").title(), "Count": gate_counts[g]} for g in gate_order]
+        )
+        st.bar_chart(gate_df.set_index("Gate"))
+    else:
+        st.info("No gate telemetry available yet.")
+
+    st.subheader("🧩 NLP Relevance Heatmap")
+    heat_rows = []
+    for packet in evidence_packets:
+        try:
+            payload = json.loads(packet.get("evidence_json") or "{}")
+        except json.JSONDecodeError:
+            continue
+        for item in payload.get("nlp_relevance", []):
+            relevance = float(item.get("composite_relevance", 0.0) or 0.0)
+            source = str(item.get("source", "unknown"))
+            if relevance < 0.2:
+                bucket = "0.0-0.2"
+            elif relevance < 0.4:
+                bucket = "0.2-0.4"
+            elif relevance < 0.6:
+                bucket = "0.4-0.6"
+            elif relevance < 0.8:
+                bucket = "0.6-0.8"
+            else:
+                bucket = "0.8-1.0"
+            heat_rows.append({"source": source, "bucket": bucket})
+
+    if heat_rows:
+        import plotly.express as px
+
+        heat_df = pd.DataFrame(heat_rows)
+        pivot = (
+            heat_df.groupby(["source", "bucket"])
+            .size()
+            .reset_index(name="count")
+            .pivot(index="source", columns="bucket", values="count")
+            .fillna(0)
+        )
+        fig_heat = px.imshow(
+            pivot,
+            text_auto=True,
+            aspect="auto",
+            color_continuous_scale="Viridis",
+            labels=dict(x="Relevance Bucket", y="OSINT Source", color="Mentions"),
+        )
+        fig_heat.update_layout(
+            height=320,
+            plot_bgcolor='rgba(0,0,0,0)',
+            paper_bgcolor='rgba(0,0,0,0)',
+            font=dict(color='white'),
+        )
+        st.plotly_chart(fig_heat, use_container_width=True)
+    else:
+        st.info("No NLP relevance traces available yet.")
 
     st.divider()
     st.subheader("🧪 Evaluation Metrics")

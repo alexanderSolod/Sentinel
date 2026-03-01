@@ -205,8 +205,8 @@ python main.py dashboard  # Launch Streamlit
 
 ### Nice to Have
 
+- [x] W&B Weave tracing for AI decisions - DONE
 - [ ] Voice alerts with ElevenLabs
-- [ ] W&B Weave tracing for AI decisions
 - [ ] Advanced OSINT: ADS-B flight tracking, social sentiment
 - [ ] Export reports to PDF
 

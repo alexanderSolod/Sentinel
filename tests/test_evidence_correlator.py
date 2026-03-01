@@ -1,4 +1,5 @@
 import asyncio
+import json
 import tempfile
 import unittest
 from datetime import datetime, timezone
@@ -47,6 +48,9 @@ class EvidenceCorrelatorTests(unittest.TestCase):
         self.assertIsNotNone(packet.get("case_id"))
         self.assertEqual(packet["market_id"], "mkt-1")
         self.assertEqual(packet["wallet_address"], trade.wallet_address.lower())
+        evidence = json.loads(packet["evidence_json"])
+        self.assertIn("autoencoder", evidence)
+        self.assertIn("normalized_score", evidence["autoencoder"])
 
         conn = get_connection(self.db_path)
         try:
