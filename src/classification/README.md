@@ -2,7 +2,7 @@
 
 Trade anomalies go through up to three stages, each using a different Mistral model. Most trades only hit Stage 1. Suspicious ones get escalated.
 
-## Pipeline Flow
+## Pipeline flow
 
 ```
 Anomaly ─→ Feature Extraction ─→ RF + Game Theory
@@ -56,7 +56,7 @@ Fast 4-class classification using **Mistral Small** with few-shot prompting.
 
 **Early dismissal gate:** When `enable_rf_gate=True` (default), cases where RF score < 0.15 AND game-theory score < 20 AND heuristic suspicion < 20 are classified as SPECULATOR without an API call.
 
-### Rule-Based Fallback
+### Rule-based fallback
 
 When the Mistral API is unavailable, `_classify_with_rules()` uses heuristics:
 - `hours_before_news < -2` + no OSINT signals = INSIDER
@@ -64,28 +64,23 @@ When the Mistral API is unavailable, `_classify_with_rules()` uses heuristics:
 - `0 <= hours_before_news < 0.1` = FAST_REACTOR
 - No news correlation = SPECULATOR
 
-## Stage 2: Deep Analysis (`stage2_magistral.py`)
+## Stage 2: Deep analysis (`stage2_magistral.py`)
 
 Chain-of-thought reasoning using **Mistral Large**. Only runs for cases where:
 - Classification is INSIDER or OSINT_EDGE, OR
 - BSS >= 40
 
-**Produces:**
-- XAI narrative (explainable AI reasoning)
-- Fraud Triangle analysis (Pressure, Opportunity, Rationalization)
-- Temporal analysis of trade-vs-news timing
-- Evidence summary
-- Action recommendation
+Outputs an XAI narrative, Fraud Triangle analysis (Pressure, Opportunity, Rationalization), temporal analysis of trade-vs-news timing, evidence summary, and an action recommendation.
 
-## Stage 3: SAR Generation (`stage3_sar.py`)
+## Stage 3: SAR generation (`stage3_sar.py`)
 
-Generates regulatory-grade **Suspicious Activity Reports** using **Mistral Large**. Only runs for:
+Generates **Suspicious Activity Reports** using **Mistral Large**. These read like what you'd file with a regulator. Only runs for:
 - INSIDER classifications, OR
 - BSS >= 60
 
-**Produces:** A structured SAR -- severity level, executive summary, evidence timeline, recommended actions.
+Outputs a structured SAR: severity level, executive summary, evidence timeline, recommended actions.
 
-## Pipeline Orchestrator (`pipeline.py`)
+## Pipeline orchestrator (`pipeline.py`)
 
 `SentinelPipeline` is the main entry point:
 
@@ -104,11 +99,7 @@ Supports batch processing with `process_batch()` using a thread pool.
 
 ## Evaluation (`evaluation.py`)
 
-Computes quality metrics against human-labeled arena votes:
-- False Positive Rate (FPR) — target < 10%
-- False Negative Rate (FNR)
-- Confusion matrix across all 4 classes
-- Consensus agreement scores
+Computes quality metrics against human-labeled arena votes: FPR (target < 10%), FNR, confusion matrix across all 4 classes, and consensus agreement scores.
 
 ```bash
 python main.py metrics
@@ -116,13 +107,13 @@ python main.py metrics
 
 ---
 
-## Fine-Tuning Pipeline (`finetuning.py`)
+## Fine-tuning pipeline (`finetuning.py`)
 
 Fine-tunes a Mistral model on Sentinel's labeled trade data.
 
-### Training Data
+### Training data
 
-**500 examples** with controlled distribution:
+500 examples with controlled distribution:
 
 | Class | Count | Percentage |
 |-------|-------|-----------|
@@ -150,7 +141,7 @@ python -m src.classification.finetuning --check-job <job-id>
 python -m src.classification.finetuning --wait
 ```
 
-### Deploying a Fine-Tuned Model
+### Deploying a fine-tuned model
 
 Once the job completes, Mistral returns a model ID (e.g., `ft:open-mistral-nemo:sentinel-v1:abc123`).
 
@@ -162,7 +153,7 @@ SENTINEL_FINETUNED_MODEL=ft:open-mistral-nemo:sentinel-v1:abc123
 
 Stage 1 triage will automatically use the fine-tuned model when this variable is set.
 
-### Training Format
+### Training format
 
 Each example is a JSONL line in Mistral chat format:
 
@@ -176,7 +167,7 @@ Each example is a JSONL line in Mistral chat format:
 }
 ```
 
-### Fine-Tuning Parameters
+### Fine-tuning parameters
 
 | Parameter | Default | Description |
 |-----------|---------|-------------|
@@ -186,7 +177,7 @@ Each example is a JSONL line in Mistral chat format:
 | Train/val split | 90/10 | Data split ratio |
 | Suffix | `sentinel-v1` | Model name suffix |
 
-### Continuous Learning (`continuous_learning.py`)
+### Continuous learning (`continuous_learning.py`)
 
 Retrains the model as new arena votes come in. Human reviewers label cases, those labels feed back into the next training run.
 

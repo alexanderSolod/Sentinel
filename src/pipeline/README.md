@@ -2,7 +2,7 @@
 
 Connects to Polymarket's WebSocket, grabs every trade, and runs it through wallet profiling, cluster detection, OSINT correlation, and AI classification. This is what you run in production.
 
-## Evidence Correlator (`evidence_correlator.py`)
+## Evidence correlator (`evidence_correlator.py`)
 
 ### EvidenceCorrelator
 
@@ -24,18 +24,9 @@ WebSocket Trade ─→ Wallet Profiling ─→ Cluster Analysis ─→ OSINT Cor
                                                       Evidence Packet ─→ Database
 ```
 
-**What happens per trade:**
+Per trade, the pipeline runs through: wallet profiling (history, win rate, funding chain) → DBSCAN cluster check → OSINT correlation (temporal gap) → streaming z-score → autoencoder scoring → 5-gate false positive filter → AI classification (Stages 1-3) → persist evidence packet to database.
 
-1. Wallet profiling (trade history, win rate, funding chain, risk flags)
-2. DBSCAN cluster analysis (is this wallet part of a coordinated group?)
-3. OSINT correlation (temporal gap to public signals)
-4. Streaming anomaly detection (online z-score against rolling market stats)
-5. Autoencoder scoring (unsupervised anomaly score)
-6. False positive gate (5-gate cascade to filter noise)
-7. AI classification (Stages 1-3 via `SentinelPipeline`)
-8. Save evidence packet to database
-
-### Running Live
+### Running live
 
 ```bash
 # Start the API server first
@@ -45,9 +36,9 @@ python main.py api
 python main.py monitor --live    # Ctrl+C to stop
 ```
 
-Connects to Polymarket's WebSocket, processes each incoming `TradeEvent`, and saves evidence packets to the database. The dashboard auto-refreshes to show new cases.
+Connects to Polymarket's WebSocket, processes each `TradeEvent`, and saves evidence packets. The dashboard auto-refreshes to show new cases.
 
-### Running with Mock Data
+### Mock data
 
 ```bash
 python main.py monitor --mock        # 20 trades (default)
@@ -55,11 +46,11 @@ python main.py monitor --mock 50     # 50 trades
 python main.py monitor --mock 200    # 200 trades, 0.25s delay each
 ```
 
-Mock mode generates synthetic trades with a mix of insider/edge/reactor/speculator patterns. Still hits the Mistral API for classification.
+Generates synthetic trades with a mix of insider/edge/reactor/speculator patterns. Still hits the Mistral API for classification — mock only applies to the trade data, not the AI.
 
-### Correlation Score
+### Correlation score
 
-Each evidence packet includes a **correlation score**, a weighted composite of four signals:
+Each evidence packet includes a correlation score — a weighted composite of four signals:
 
 | Signal | Weight | Source |
 |--------|--------|--------|
@@ -68,7 +59,7 @@ Each evidence packet includes a **correlation score**, a weighted composite of f
 | Temporal gap score | 0.3 | OSINT correlator |
 | Volume z-score | 0.2 | Streaming detector |
 
-### Temporal Gap Scoring
+### Temporal gap scoring
 
 `compute_temporal_gap_score()` converts the raw hours-before-news value into a 0-1 suspicion score:
 
@@ -80,11 +71,11 @@ Each evidence packet includes a **correlation score**, a weighted composite of f
 | After news | 0.10-0.30 | Likely legitimate |
 | No news correlation | 0.15 | Neutral |
 
-## Demo Stream (`demo_stream.py`)
+## Demo stream (`demo_stream.py`)
 
-Generates synthetic trade streams for demos and development. Used by `main.py init` to seed the database with pre-classified cases.
+Generates synthetic trade streams for demos and development. `main.py init` uses this to seed the database with pre-classified cases.
 
-## Data Flow
+## Data flow
 
 ```
 Polymarket WebSocket

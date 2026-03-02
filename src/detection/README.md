@@ -2,7 +2,7 @@
 
 Everything that runs before the AI classification. This module flags suspicious trades, profiles wallets, clusters coordinated behavior, and extracts the feature vectors that the [classification pipeline](../classification/README.md) uses to make decisions.
 
-## Module Overview
+## How it fits together
 
 ```
 Trade Data ─→ Anomaly Detector ─→ Wallet Profiler ─→ Cluster Analysis
@@ -24,9 +24,9 @@ Trade Data ─→ Anomaly Detector ─→ Wallet Profiler ─→ Cluster Analysi
          Classification Pipeline
 ```
 
-## Anomaly Detector (`anomaly_detector.py`)
+## Anomaly detector (`anomaly_detector.py`)
 
-Three detectors that flag trades for further analysis:
+Three detectors flag trades for further analysis:
 
 ### VolumeDetector
 Z-score based volume spike detection. Flags trades where volume exceeds 3x the rolling baseline.
@@ -40,38 +40,25 @@ Confidence scoring for fresh wallets:
 - Account age < 48 hours
 - Outputs a 0-1 confidence score
 
-## Wallet Profiler (`wallet_profiler.py`)
+## Wallet profiler (`wallet_profiler.py`)
 
 ### WalletProfiler
-Aggregates wallet trading history:
-- Total trade count and volume
-- Win rate calculation
-- Market diversity
-- Activity timeline
+Aggregates wallet trading history: total trade count and volume, win rate, market diversity, and activity timeline.
 
 ### FundingChain
-Traces the funding origins of a wallet:
-- Known address registry (centralized exchanges, DEXes, mixers)
-- Funding depth (hops from a known entity)
-- Risk flags: `fresh_wallet`, `high_win_rate`, `mixer_funded`
+Traces where a wallet's money came from. Checks against a known address registry (CEXes, DEXes, mixers), counts the hops from a known entity, and flags risk signals: `fresh_wallet`, `high_win_rate`, `mixer_funded`.
 
-## Cluster Analysis (`cluster_analysis.py`)
+## Cluster analysis (`cluster_analysis.py`)
 
 ### SniperDetector
-Uses **DBSCAN** (Density-Based Spatial Clustering) to detect coordinated wallet groups:
-- Wallets entering the same market within minutes of each other
-- Similar position sizes across a group
-- Clustering by timing, market, and bet direction
+Uses **DBSCAN** to detect coordinated wallet groups. Looks for wallets entering the same market within minutes of each other, taking similar position sizes, betting in the same direction.
 
 The Iran Strike case was caught by a **6-wallet cluster** that all bet the same way within a tight time window.
 
 ### CompositeRiskScorer
-Weighted signal aggregation with multi-signal bonuses:
-- Combines wallet age, trade count, win rate, cluster membership, timing
-- Applies multiplicative bonuses when multiple risk signals converge
-- Outputs a composite risk score (0-100)
+Combines wallet age, trade count, win rate, cluster membership, and timing into a single 0-100 risk score. Applies multiplicative bonuses when multiple signals converge — a fresh wallet in a cluster with perfect win rate scores much higher than any one of those signals alone.
 
-## Feature Extraction (`features.py`)
+## Feature extraction (`features.py`)
 
 ### FeatureExtractor
 Extracts a standardized **13-feature vector** from raw anomaly data:
@@ -98,7 +85,7 @@ Dataclass with helper methods:
 - `.to_array()` — numpy array for ML models
 - `.suspicion_heuristic` — quick rule-based suspicion score
 
-## Random Forest Classifier (`rf_classifier.py`)
+## Random forest classifier (`rf_classifier.py`)
 
 ### RFClassifier
 - **300 estimators** with PCA dimensionality reduction
@@ -108,21 +95,14 @@ Dataclass with helper methods:
 
 Runs before the AI classification. High RF scores push the BSS up in Stage 1 triage.
 
-## Game Theory Engine (`game_theory.py`)
+## Game theory engine (`game_theory.py`)
 
 ### GameTheoryEngine
 Behavioral analysis based on information-theoretic metrics:
 
-**Entropy analysis across 5 dimensions:**
-1. Timing entropy — how predictable is the wallet's trade timing?
-2. Market entropy — how diverse is market selection?
-3. Win rate entropy — is the win rate abnormally high?
-4. Position entropy — are position sizes consistent?
-5. Hour-of-day entropy — does the wallet trade at unusual hours?
+Measures entropy across 5 dimensions: trade timing, market selection, win rate, position sizing, and hour-of-day patterns. A wallet that always wins, always trades at the same time, and never diversifies has suspiciously low entropy.
 
-**Player type mapping:**
-- Maps behavioral fingerprints to known player archetypes
-- Identifies anomalous entropy patterns (e.g., a "perfect" win rate with zero timing variance)
+Maps behavioral fingerprints to known player archetypes and flags anomalous patterns (e.g., perfect win rate with zero timing variance).
 
 **Output:**
 - `game_theory_suspicion_score` (0-100)
@@ -133,25 +113,17 @@ Behavioral analysis based on information-theoretic metrics:
 ## Autoencoder (`autoencoder.py`)
 
 ### TradingAutoencoder
-Unsupervised anomaly detection using a numpy-based autoencoder:
-- Learns to reconstruct "normal" trading patterns
-- High reconstruction error = anomalous behavior
-- Outputs a normalized anomaly score (0-1)
+Learns to reconstruct "normal" trading patterns. When it can't reconstruct a trade well, that trade is probably anomalous. Outputs a normalized anomaly score (0-1). Built on pure numpy — no torch/tensorflow dependency.
 
-No external dependencies beyond numpy.
-
-## Streaming Detector (`streaming_detector.py`)
+## Streaming detector (`streaming_detector.py`)
 
 ### StreamingAnomalyDetector
-Online anomaly detection for the real-time pipeline:
-- Maintains rolling statistics (mean, variance) per market
-- Updates incrementally as new trades arrive
-- Flags trades that exceed dynamic thresholds
+The online version of anomaly detection for the real-time pipeline. Maintains rolling statistics (mean, variance) per market, updates incrementally as trades arrive, and flags anything that blows past dynamic thresholds.
 
-## 5-Gate False Positive Cascade (`fp_gate.py`)
+## 5-gate false positive cascade (`fp_gate.py`)
 
 ### FalsePositiveGate
-Filters out noise before it hits the AI pipeline. Five gates in sequence, each with a weighted vote:
+Keeps noise out of the AI pipeline. Five gates in sequence, each casting a weighted vote:
 
 ```
 Trade ─→ Statistical (20%) ─→ RF (25%) ─→ Autoencoder (15%)
@@ -167,10 +139,7 @@ Trade ─→ Statistical (20%) ─→ RF (25%) ─→ Autoencoder (15%)
 - Between 0.25-0.60 = **PASS** (continue to next gate)
 
 ### FPRTracker
-Tracks false positive rate over time:
-- Records (predicted, actual) pairs from arena votes
-- Computes FPR with a target of < 10%
-- Flags when retraining is needed
+Tracks the false positive rate over time by recording (predicted, actual) pairs from arena votes. Target is < 10% FPR. Flags when the model needs retraining.
 
 ## Files
 

@@ -1,6 +1,6 @@
 # REST API
 
-FastAPI backend. Serves data to the React dashboard and exposes endpoints for external use.
+FastAPI backend that serves data to the React dashboard. Also works as a standalone API.
 
 ## Running
 
@@ -13,9 +13,9 @@ The React dashboard (`ui/`) proxies API calls to this server via Vite's dev prox
 
 ## Authentication
 
-Set `SENTINEL_API_KEY` in `.env` to protect mutating endpoints. If unset, the API runs in **open demo mode** (no auth required).
+Set `SENTINEL_API_KEY` in `.env` to protect write endpoints. If unset, everything runs open (demo mode).
 
-Protected endpoints require the `X-API-Key` header:
+Protected endpoints need the `X-API-Key` header:
 
 ```bash
 curl -X POST http://localhost:8000/api/vote \
@@ -26,7 +26,7 @@ curl -X POST http://localhost:8000/api/vote \
 
 ## Endpoints
 
-### Health & Metrics
+### Health and metrics
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -53,9 +53,9 @@ curl -X POST http://localhost:8000/api/vote \
 |--------|------|-------------|
 | `GET` | `/api/cases/{case_id}` | Full case details with anomaly, evidence, and votes |
 
-Returns everything about a case: anomaly data, evidence packet (wallet profile, OSINT signals, temporal gap), arena votes, classification details (BSS, PES, reasoning), and SAR report if one was generated.
+Returns the full picture: anomaly data, evidence packet (wallet profile, OSINT signals, temporal gap), arena votes, classification details (BSS, PES, reasoning), and the SAR report if one exists.
 
-### Sentinel Index
+### Sentinel index
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -75,7 +75,7 @@ Returns everything about a case: anomaly data, evidence packet (wallet profile, 
 | `GET` | `/api/evidence` | List evidence packets with pagination |
 | `GET` | `/api/evidence/{case_id}` | Get evidence packet for a specific case |
 
-### Voting (Arena)
+### Voting (arena)
 
 | Method | Path | Description | Auth |
 |--------|------|-------------|------|
@@ -106,7 +106,7 @@ CORS is configured to allow requests from `localhost:5173` (Vite dev server) and
 
 ## Database
 
-The SQLite schema is created on startup if it doesn't exist. Path defaults to `./data/sentinel.db` (override with `DATABASE_PATH` env var).
+SQLite schema gets created on first run. Defaults to `./data/sentinel.db` — override with `DATABASE_PATH` env var.
 
 ## Files
 

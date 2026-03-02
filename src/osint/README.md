@@ -2,7 +2,7 @@
 
 Pulls open-source intelligence from 5 data sources, stores it in a vector DB for semantic search, and correlates signals to prediction market trades. The whole point: measure the **temporal gap** between a trade and the nearest public signal. That gap is what the [classification pipeline](../classification/README.md) uses to decide insider vs. legitimate.
 
-## Module Overview
+## How it fits together
 
 ```
        RSS Feeds (12)          GDELT          GDACS         ACLED       NASA FIRMS
@@ -24,12 +24,11 @@ Pulls open-source intelligence from 5 data sources, stores it in a vector DB for
                    └─────────────────┘    └──────────────────┘
 ```
 
-## Data Sources (`sources.py`)
+## Data sources (`sources.py`)
 
 ### OSINTAggregator
 
-Single interface for all 5 intelligence sources. Each source returns `OSINTEvent` objects with:
-- `source`, `headline`, `timestamp`, `location`, `threat_level`, `raw_data`
+Single interface for all 5 sources. Each returns `OSINTEvent` objects with `source`, `headline`, `timestamp`, `location`, `threat_level`, and `raw_data`.
 
 | Source | Data | Auth | Cache TTL | Threat Levels |
 |--------|------|------|-----------|---------------|
@@ -39,9 +38,9 @@ Single interface for all 5 intelligence sources. Each source returns `OSINTEvent
 | **ACLED** | Armed conflict events, political violence | `ACLED_ACCESS_TOKEN` | 15 min | Fatality-based |
 | **NASA FIRMS** | Active fire/thermal anomaly detection | `NASA_FIRMS_API_KEY` | 30 min | Brightness/confidence |
 
-### Threat Classification
+### Threat classification
 
-Keyword matching assigns threat levels to each event:
+Keyword matching assigns threat levels:
 
 | Level | Meaning | Example Keywords |
 |-------|---------|-----------------|
@@ -51,22 +50,11 @@ Keyword matching assigns threat levels to each event:
 | LOW | Developing situation | negotiation, warning, monitoring |
 | INFO | Background intelligence | report, analysis, forecast |
 
-## RSS Aggregator (`rss_aggregator.py`)
+## RSS aggregator (`rss_aggregator.py`)
 
-Aggregates 12 RSS feeds in parallel:
+Pulls from 12 feeds in parallel — Reuters (3 feeds), AP (2), BBC (2), Bloomberg, Al Jazeera, CNBC World, NPR, and The Guardian. Deduplicates by headline similarity and normalizes timestamps.
 
-- Reuters (Top News, World, Business)
-- AP News (Top, World)
-- BBC News (Top, World)
-- Bloomberg
-- Al Jazeera
-- CNBC World
-- NPR News
-- The Guardian World
-
-Deduplicates by headline similarity and normalizes timestamps.
-
-## Vector Store (`vector_store.py`)
+## Vector store (`vector_store.py`)
 
 ### VectorStore
 
@@ -86,15 +74,15 @@ results = store.search_by_market("Will Iran strike Israel?", k=10)
 results = store.search_time_window(query, start_dt, end_dt)
 ```
 
-**Embedding fallback:** If Mistral Embed is unavailable, falls back to `sentence-transformers/all-MiniLM-L6-v2` for local embeddings.
+Falls back to `sentence-transformers/all-MiniLM-L6-v2` for local embeddings if Mistral Embed is unavailable.
 
-Stage 2 deep analysis uses this for RAG context -- it pulls relevant OSINT signals when building the Fraud Triangle analysis.
+Stage 2 deep analysis uses the vector store for RAG context — it pulls relevant OSINT signals when building the Fraud Triangle analysis.
 
-## Market-OSINT Correlator (`correlator.py`)
+## Market-OSINT correlator (`correlator.py`)
 
 ### MarketCorrelator
 
-This is where the temporal gap math happens. Matches OSINT events to prediction markets and computes the time delta.
+Where the temporal gap math happens. Matches OSINT events to prediction markets and computes the time delta.
 
 ```python
 correlator = MarketCorrelator(vector_store=store)
@@ -115,7 +103,7 @@ result.information_asymmetry_indicator  # "TRADE_BEFORE_INFO"
 | `information_asymmetry_indicator` | str | Pattern classification |
 | `matched_events` | list | Matched OSINT events with relevance scores |
 
-### Information Asymmetry Patterns
+### Information asymmetry patterns
 
 | Pattern | Meaning | Implication |
 |---------|---------|-------------|
@@ -125,23 +113,15 @@ result.information_asymmetry_indicator  # "TRADE_BEFORE_INFO"
 | `NO_SIGNALS` | No matched OSINT events | Inconclusive |
 | `MIXED_SIGNALS` | Some before, some after | Requires deeper analysis |
 
-### Anomaly Enrichment
+### Anomaly enrichment
 
-`correlator.enrich_anomaly()` adds fields to an anomaly dict before it enters the classification pipeline:
-- `osint_signals_before_trade`
-- `hours_before_news`
-- `information_asymmetry`
-- `matched_osint_events`
+`correlator.enrich_anomaly()` adds four fields to an anomaly dict before it enters the classification pipeline: `osint_signals_before_trade`, `hours_before_news`, `information_asymmetry`, and `matched_osint_events`.
 
-## Text Analyzer (`text_analyzer.py`)
+## Text analyzer (`text_analyzer.py`)
 
 ### OSINTTextAnalyzer
 
-NLP-based relevance scoring between OSINT events and market questions:
-- Keyword extraction from market names
-- TF-IDF similarity scoring
-- Entity matching (countries, organizations, events)
-- Used by the correlator to rank matched OSINT events by relevance
+Scores how relevant an OSINT event is to a given market question. Extracts keywords from market names, runs TF-IDF similarity, and matches entities (countries, organizations, event types). The correlator uses this to rank its matches.
 
 ## Files
 
