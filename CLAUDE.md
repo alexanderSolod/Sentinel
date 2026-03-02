@@ -52,7 +52,7 @@ python -m src.osint.correlator
 
 The core AI pipeline processes anomalies through three stages:
 
-1. **Stage 1 - Triage** (`src/classification/stage1_triage.py`): Fast 4-class classification using Mistral Small with few-shot prompting. Outputs BSS (Behavioral Suspicion Score) and PES (Public Explainability Score).
+1. **Stage 1 - Triage** (`src/classification/stage1_triage.py`): Fast 4-class classification using a custom fine-tuned Mistral Small. Outputs BSS (Behavioral Suspicion Score) and PES (Public Explainability Score).
 
 2. **Stage 2 - Deep Analysis** (`src/classification/stage2_magistral.py`): Chain-of-thought reasoning with Fraud Triangle analysis (Pressure, Opportunity, Rationalization). Only runs for INSIDER/OSINT_EDGE cases or BSS >= 40.
 

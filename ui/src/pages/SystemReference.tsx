@@ -65,7 +65,7 @@ const DETECTION_CHART = `graph LR
 const LLM_CONTENT = `
 ## Stage 1 — Triage (\`mistral-small-latest\`)
 
-Performs rapid **4-class classification** using few-shot prompting with 4 gold-standard examples from real events (including the **Iran Strike** and **Axiom/ZachXBT** cases).
+Performs rapid **4-class classification** using a finetuned mistral small model 4 gold-standard examples from real events (including the **Iran Strike** and **Axiom/ZachXBT** cases).
 
 **Input:** The model receives a structured JSON containing:
 - Wallet age, trade count, trade size
@@ -154,7 +154,7 @@ Includes **3 gold-standard examples** from real events:
 const PIPELINE_OVERVIEW_CONTENT = `
 Sentinel processes prediction market trades through a **three-stage AI classification pipeline**. Each trade is enriched with OSINT correlation data before entering the pipeline. Only cases that exceed the BSS threshold advance to deeper analysis.
 
-- **Stage 1 — Triage:** Mistral Small performs fast 4-class classification with few-shot prompting. Outputs BSS and PES scores.
+- **Stage 1 — Triage:** Mistral Small performs fast 4-class classification with a fine-tuned model. Outputs BSS and PES scores.
 - **Stage 2 — Deep Analysis:** Magistral reasoning engine applies chain-of-thought Fraud Triangle analysis (Pressure, Opportunity, Rationalization). Runs only for INSIDER/OSINT\_EDGE cases or BSS ≥ 40.
 - **Stage 3 — SAR Generation:** Generates Suspicious Activity Reports for high-suspicion cases, suitable for regulatory submission.
 `;
@@ -257,7 +257,7 @@ export default function SystemReference() {
                   model="mistral-small-latest"
                   temp="0.1"
                   tokens="500"
-                  purpose="Fast 4-class triage classification with few-shot prompting"
+                  purpose="Fast 4-class triage classification with a fine-tuned model"
                 />
                 <ModelRow
                   stage="Stage 2"

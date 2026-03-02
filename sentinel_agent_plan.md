@@ -1896,7 +1896,7 @@ PHASE 5 (Integration)
 |------|--------|------------|
 | Mistral API rate limits | Blocks WS4 entirely | Batch requests. Add exponential backoff. Monitor usage. |
 | Polymarket CLOB API downtime | No live data | Cache recent data. Build backtest mode as fallback. |
-| Fine-tuning job fails | No custom model | FALLBACK: Use base mistral-small-latest with few-shot prompt. Already built into TASK 4.3. |
+| Fine-tuning job fails | No custom model | FALLBACK: Use finetuned mistral-small model. Already built into TASK 4.3. |
 | ChromaDB sparse data | Weak XAI narratives | Manually seed 50-100 OSINT events. Run RSS aggregator for 30+ min before demo. |
 | SQLite write conflicts | Crashes under concurrency | WAL mode + retry logic + separate connections per async task. |
 | Missing API keys (OpenSky, VesselFinder) | Reduced OSINT coverage | Descope ADS-B/AIS from MVP. RSS + GDELT + ACLED sufficient for demo. |

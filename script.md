@@ -4,7 +4,7 @@
 
 ## [OPEN — CAMERA]
 
-"Sentinel is the first public database of prediction market insider trading.
+"Sentinel is the first public database of prediction market insider trading. Built specifically to capture events like what happened on that day. Here's how the Iran strike would have played out if you were monitoring it on our platform
 
 On February 28th, the US struck Iran. Six hours before that happened, six brand-new wallets — funded that same day — placed $60,000 on the exact date. They walked away with $1.2 million. Nobody flagged it. That's what Sentinel is for."
 
@@ -16,7 +16,9 @@ On February 28th, the US struck Iran. Six hours before that happened, six brand-
 
 Now watch those six wallets. They're all fresh — created this month, funded hours ago. They're not betting on 'Iran eventually.' They're buying YES on February 28th, specifically. That kind of specificity doesn't come from conviction. It comes from knowing.
 
-All six cluster on the same funding path. Same origin, same timing, same target. Sentinel fires the flag before the first headline."
+All six cluster on the same funding path. Same origin, same timing, same target. Sentinel fires the flag before the first headline.
+
+Every trade hits a fine-tuned Mistral model first — trained on hundreds of labeled examples to classify insider trades from noise. That's the triage. Takes seconds, and the eval results hold."
 
 ---
 
@@ -26,11 +28,13 @@ All six cluster on the same funding path. Same origin, same timing, same target.
 
 Sentinel searches every public source it can find — news, conflict data, disaster alerts, satellite imagery — for anything that could explain this bet before it was placed. Nothing. These wallets had information the public didn't.
 
-Then the reasoning model writes the fraud triangle:
+When triage flags a case, it escalates to Magistral — Mistral's reasoning model — with full OSINT context pulled from a vector store. Then it writes the fraud triangle:
 
 Motive: $1.2 million. Means: six coordinated wallets on the same funding path. Opportunity: a position placed on the exact strike date, six hours before it happened.
 
-Verdict: Insider. High confidence."
+Verdict: Insider. High confidence.
+
+High-confidence cases generate a full Suspicious Activity Report automatically. Three stages — fine-tuned triage, Magistral reasoning, SAR generation — from raw trade to published case."
 
 ---
 
