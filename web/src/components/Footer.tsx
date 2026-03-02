@@ -20,7 +20,7 @@ export default function Footer() {
           className="text-xs text-text-tertiary"
           style={{ fontFamily: 'var(--font-mono)' }}
         >
-          AI-Powered Prediction Market Surveillance &middot; Mistral Global Hackathon 2026
+          Prediction market surveillance &middot; Mistral Global Hackathon 2026
         </p>
       </div>
     </footer>

@@ -2,13 +2,11 @@ import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   Activity,
-  Database,
   Users,
   ChevronLeft,
   ChevronRight,
   Eye,
   BookOpen,
-  HeartPulse,
 } from 'lucide-react';
 import { useHealth } from '../../api/hooks.ts';
 
@@ -17,12 +15,6 @@ const NAV_GROUPS = [
     label: 'MONITORING',
     items: [
       { to: '/', icon: Activity, label: 'Live Monitor', end: true },
-    ],
-  },
-  {
-    label: 'ANALYSIS',
-    items: [
-      { to: '/index', icon: Database, label: 'Sentinel Index' },
     ],
   },
   {
@@ -35,7 +27,6 @@ const NAV_GROUPS = [
     label: 'SYSTEM',
     items: [
       { to: '/reference', icon: BookOpen, label: 'Reference' },
-      { to: '/system', icon: HeartPulse, label: 'System Health' },
     ],
   },
 ] as const;

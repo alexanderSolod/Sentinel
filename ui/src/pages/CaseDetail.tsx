@@ -47,10 +47,10 @@ export default function CaseDetail() {
         <p className="font-mono text-text-secondary text-sm">
           Select a case from the{' '}
           <button
-            onClick={() => navigate('/index')}
+            onClick={() => navigate('/')}
             className="text-accent underline underline-offset-2 hover:text-accent/80 transition-colors"
           >
-            Sentinel Index
+            Live Monitor
           </button>{' '}
           to view details.
         </p>
@@ -85,10 +85,10 @@ export default function CaseDetail() {
           Failed to load case: {error}
         </p>
         <button
-          onClick={() => navigate('/index')}
+          onClick={() => navigate('/')}
           className="text-accent font-mono text-xs underline underline-offset-2"
         >
-          Back to index
+          Back to monitor
         </button>
       </div>
     );

@@ -3,7 +3,7 @@ import Globe from './Globe';
 
 const classifications = [
   { label: 'INSIDER',      color: '#ff2020', verdict: 'Flagged: high suspicion.', desc: 'Likely traded on non-public information' },
-  { label: 'OSINT_EDGE',   color: '#33ff33', verdict: 'Flagged: likely clean.',   desc: 'Superior public research — not illegal' },
+  { label: 'OSINT_EDGE',   color: '#33ff33', verdict: 'Flagged: likely clean.',   desc: 'Traded on public research, not insider info' },
   { label: 'FAST_REACTOR', color: '#ff8c00', verdict: 'Flagged: fast mover.',     desc: 'Reacted to breaking news within minutes' },
   { label: 'SPECULATOR',   color: '#888888', verdict: 'Clean.',                   desc: 'No information edge detected' },
 ];
@@ -16,13 +16,13 @@ export default function WhatIsSentinel() {
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[80%] max-w-4xl h-[1px] bg-gradient-to-r from-transparent via-border-default to-transparent" />
 
       {/* Globe — large, absolute right */}
-      <div className="absolute top-1/2 -translate-y-1/2 right-0 pointer-events-none" style={{ width: '50vw' }}>
+      <div className="absolute top-1/2 -translate-y-1/2 right-0 pointer-events-none hidden md:block" style={{ width: '50vw' }}>
         <Globe />
       </div>
 
       {/* Text — left column */}
       <div className="relative z-10 w-full max-w-[1200px] mx-auto">
-        <div style={{ maxWidth: '52%' }}>
+        <div className="max-w-full md:max-w-[52%]">
 
           <span className="text-xs font-bold tracking-[0.15em] uppercase text-accent" style={{ fontFamily: 'var(--font-mono)' }}>
             // What is Sentinel
@@ -48,8 +48,8 @@ export default function WhatIsSentinel() {
 
           <div className="mt-12 space-y-0">
             {classifications.map((cls) => (
-              <div key={cls.label} className="flex items-baseline gap-5 py-4 border-b border-border-subtle">
-                <span className="text-xs font-bold uppercase tracking-wider w-28 flex-shrink-0"
+              <div key={cls.label} className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-5 py-4 border-b border-border-subtle">
+                <span className="text-xs font-bold uppercase tracking-wider sm:w-28 flex-shrink-0"
                   style={{ color: cls.color, fontFamily: 'var(--font-mono)' }}>
                   {cls.label}
                 </span>

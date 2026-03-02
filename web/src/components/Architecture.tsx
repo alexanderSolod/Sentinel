@@ -2,10 +2,10 @@
 import { useEffect, useRef, useState } from 'react';
 
 const steps = [
-  { n: '01', label: 'Watch every trade',         desc: 'Live WebSocket feed from Polymarket. Every trade, every market, every second.',                              color: '#ff8c00' },
+  { n: '01', label: 'Watch every trade',         desc: 'Live WebSocket feed from Polymarket. Every trade, every market.',                              color: '#ff8c00' },
   { n: '02', label: 'Spot the anomalies',         desc: 'Volume spikes, price jumps, and fresh wallets get flagged automatically.',                                   color: '#ff2020' },
-  { n: '03', label: 'Check the news',             desc: 'Cross-referenced against GDELT, GDACS, ACLED, and NASA FIRMS to find what was public — and when.',          color: '#33ff33' },
-  { n: '04', label: 'Run the AI',                 desc: 'Mistral Small triages fast. Magistral goes deep — reasoning through motive, opportunity, and evidence.',    color: '#ff8c00' },
+  { n: '03', label: 'Check the news',             desc: 'Cross-referenced against GDELT, GDACS, ACLED, and NASA FIRMS to find what was public and when.',          color: '#33ff33' },
+  { n: '04', label: 'Run the AI',                 desc: 'Mistral Small triages fast. Magistral goes deep, reasoning through motive, opportunity, and evidence.',    color: '#ff8c00' },
   { n: '05', label: 'Publish the flag',            desc: 'A structured report with evidence timeline, confidence score, and alternative explanations. Open to the public.',  color: '#ff2020' },
   { n: '06', label: 'Build the record',           desc: 'Every case enters the Sentinel Index. The first open, public database of prediction market integrity cases.',        color: '#33ff33' },
 ];
@@ -63,7 +63,7 @@ export default function Architecture() {
 
         <h2 className="mt-10 font-bold text-text-primary"
           style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2.2rem,5vw,4rem)', lineHeight: 1.1 }}>
-          How It Works
+          How it works
         </h2>
 
         <div className="mt-12">

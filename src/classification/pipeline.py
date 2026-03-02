@@ -10,6 +10,7 @@ import uuid
 import json
 import logging
 import sqlite3
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 from typing import Dict, Any, Optional, List
 from dataclasses import dataclass
@@ -92,6 +93,7 @@ class SentinelPipeline:
         self.feature_extractor = FeatureExtractor()
         self.rf_classifier = RFClassifier()
         self.game_theory_engine = GameTheoryEngine()
+        self._osint_cache: Dict[str, List[Dict]] = {}  # keyed by "start|end"
 
         # Initialize W&B Weave tracing if available and configured
         if _has_weave and os.getenv("WANDB_API_KEY"):
@@ -332,26 +334,31 @@ class SentinelPipeline:
         return result
 
     def _get_osint_context(self, anomaly: Dict[str, Any]) -> List[Dict]:
-        """Get relevant OSINT events for the anomaly timeframe."""
+        """Get relevant OSINT events for the anomaly timeframe (cached)."""
         conn = None
         try:
-            conn = self._open_connection()
             trade_time = anomaly.get("trade_timestamp", anomaly.get("timestamp"))
+            if not trade_time:
+                return []
 
-            if trade_time:
-                # Get events in 24-hour window around trade
-                if isinstance(trade_time, str):
-                    trade_dt = datetime.fromisoformat(trade_time.replace("Z", "+00:00"))
-                else:
-                    trade_dt = trade_time
+            if isinstance(trade_time, str):
+                trade_dt = datetime.fromisoformat(trade_time.replace("Z", "+00:00"))
+            else:
+                trade_dt = trade_time
 
-                start = (trade_dt - timedelta(hours=24)).isoformat()
-                end = (trade_dt + timedelta(hours=24)).isoformat()
+            # Round to nearest hour for better cache hits across similar trades
+            rounded = trade_dt.replace(minute=0, second=0, microsecond=0)
+            start = (rounded - timedelta(hours=24)).isoformat()
+            end = (rounded + timedelta(hours=24)).isoformat()
 
-                events = get_osint_events_in_range(conn, start, end, limit=10)
-                return events
+            cache_key = f"{start}|{end}"
+            if cache_key in self._osint_cache:
+                return self._osint_cache[cache_key]
 
-            return []
+            conn = self._open_connection()
+            events = get_osint_events_in_range(conn, start, end, limit=10)
+            self._osint_cache[cache_key] = events
+            return events
 
         except Exception as e:
             logger.warning("Could not fetch OSINT context: %s", e)
@@ -535,31 +542,55 @@ class SentinelPipeline:
     def process_batch(
         self,
         anomalies: List[Dict[str, Any]],
-        save_to_db: bool = True
+        save_to_db: bool = True,
+        max_workers: int = 4,
     ) -> List[PipelineResult]:
         """
-        Process multiple anomalies.
+        Process multiple anomalies in parallel.
 
         Args:
             anomalies: List of anomaly dicts
             save_to_db: Whether to save to database
+            max_workers: Maximum number of concurrent threads
 
         Returns:
-            List of PipelineResults
+            List of PipelineResults (preserves input order)
         """
-        results = []
         total = len(anomalies)
+        if total == 0:
+            return []
 
-        for i, anomaly in enumerate(anomalies, 1):
-            print(f"\n[{i}/{total}] Processing...")
+        # For a single anomaly, skip thread overhead
+        if total == 1:
+            print(f"\n[1/1] Processing...")
             try:
-                result = self.process_anomaly(anomaly, save_to_db=save_to_db)
-                results.append(result)
+                return [self.process_anomaly(anomalies[0], save_to_db=save_to_db)]
             except Exception as e:
                 print(f"  ❌ Error: {e}")
-                continue
+                return []
 
-        return results
+        print(f"\nProcessing {total} anomalies in parallel (max {max_workers} workers)...")
+        # Use ordered slots to preserve input order
+        results: List[Optional[PipelineResult]] = [None] * total
+
+        def _process_one(idx: int, anomaly: Dict[str, Any]) -> None:
+            print(f"  [{idx + 1}/{total}] Starting...")
+            results[idx] = self.process_anomaly(anomaly, save_to_db=save_to_db)
+            print(f"  [{idx + 1}/{total}] Done: {results[idx].classification}")
+
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = {
+                executor.submit(_process_one, i, a): i
+                for i, a in enumerate(anomalies)
+            }
+            for future in as_completed(futures):
+                idx = futures[future]
+                try:
+                    future.result()
+                except Exception as e:
+                    print(f"  [{idx + 1}/{total}] ❌ Error: {e}")
+
+        return [r for r in results if r is not None]
 
 
 def run_pipeline(

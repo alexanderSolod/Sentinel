@@ -24,7 +24,7 @@ export default function CTA() {
 
         <div className="mt-12">
           <a
-            href="https://github.com/your-repo/sentinel"
+            href="https://github.com/alexanderSolod/Sentinel/tree/main"
             target="_blank"
             rel="noopener noreferrer"
             className="group inline-flex items-center gap-4 px-10 py-5 font-bold text-base
@@ -32,7 +32,7 @@ export default function CTA() {
             style={{ fontFamily: 'var(--font-mono)', boxShadow: '0 0 40px rgba(255,140,0,0.2)' }}
           >
             <Github className="w-5 h-5" />
-            See a Live Case
+            See a live case
             <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
           </a>
         </div>

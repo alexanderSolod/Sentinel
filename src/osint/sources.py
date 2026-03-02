@@ -346,7 +346,7 @@ class GDELTClient:
             if tone_filter:
                 params["query"] += f" {tone_filter}"
 
-            response = requests.get(self.DOC_API, params=params, timeout=30)
+            response = requests.get(self.DOC_API, params=params, timeout=10)
             response.raise_for_status()
             data = response.json()
 

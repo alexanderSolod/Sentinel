@@ -37,6 +37,9 @@ function useApi<T>(
   // Monotonically-increasing request id to discard stale responses.
   const seqRef = useRef(0);
 
+  // Track whether we already have data so background polls skip the loading state.
+  const hasDataRef = useRef(false);
+
   const fetchData = useCallback(() => {
     const currentUrl = urlRef.current;
     if (currentUrl === null) {
@@ -47,7 +50,10 @@ function useApi<T>(
     }
 
     const seq = ++seqRef.current;
-    setLoading(true);
+    // Only show loading skeleton on the initial fetch, not background refreshes.
+    if (!hasDataRef.current) {
+      setLoading(true);
+    }
     setError(null);
 
     apiFetch<T>(currentUrl)
@@ -55,6 +61,7 @@ function useApi<T>(
         if (seq === seqRef.current) {
           setData(result);
           setError(null);
+          hasDataRef.current = true;
         }
       })
       .catch((err: unknown) => {
@@ -69,8 +76,9 @@ function useApi<T>(
       });
   }, []);
 
-  // Fetch whenever the url changes.
+  // Fetch whenever the url changes. Reset hasData so new queries show skeleton.
   useEffect(() => {
+    hasDataRef.current = false;
     fetchData();
   }, [url, fetchData]);
 
@@ -104,8 +112,8 @@ function buildQuery(params: Record<string, string | number | undefined>): string
 // Domain-specific hooks
 // ---------------------------------------------------------------------------
 
-export function useHealth() {
-  return useApi<HealthResponse>('/api/health');
+export function useHealth(opts?: { refreshInterval?: number }) {
+  return useApi<HealthResponse>('/api/health', opts);
 }
 
 export function useAnomalies(params?: {
@@ -131,6 +139,7 @@ export function useIndex(params?: {
   search?: string;
   limit?: number;
   offset?: number;
+  refreshInterval?: number;
 }) {
   const url = `/api/index${buildQuery({
     classification: params?.classification,
@@ -139,15 +148,19 @@ export function useIndex(params?: {
     limit: params?.limit,
     offset: params?.offset,
   })}`;
-  return useApi<PaginatedResponse<SentinelCase>>(url);
+  return useApi<PaginatedResponse<SentinelCase>>(url, {
+    refreshInterval: params?.refreshInterval,
+  });
 }
 
-export function useEvidence(params?: { limit?: number; offset?: number }) {
+export function useEvidence(params?: { limit?: number; offset?: number; refreshInterval?: number }) {
   const url = `/api/evidence${buildQuery({
     limit: params?.limit,
     offset: params?.offset,
   })}`;
-  return useApi<PaginatedResponse<EvidencePacket>>(url);
+  return useApi<PaginatedResponse<EvidencePacket>>(url, {
+    refreshInterval: params?.refreshInterval,
+  });
 }
 
 export function useMetrics() {

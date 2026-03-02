@@ -24,7 +24,7 @@ export default function Hero() {
 
         {/* Title */}
         <h1
-          className="text-[clamp(6rem,16vw,13rem)] font-bold leading-[0.9] text-accent"
+          className="text-[clamp(3.2rem,14vw,13rem)] font-bold leading-[0.9] text-accent"
           style={{ fontFamily: 'var(--font-display)', textShadow: '0 0 80px rgba(255,140,0,0.2)' }}
         >
           Sentinel
@@ -46,7 +46,7 @@ export default function Hero() {
         {/* Buttons */}
         <div className="mt-12 flex flex-col sm:flex-row gap-5">
           <a
-            href="https://github.com/your-repo/sentinel"
+            href="https://github.com/alexanderSolod/Sentinel/tree/main"
             target="_blank"
             rel="noopener noreferrer"
             className="group inline-flex items-center gap-3 px-8 py-4 font-bold text-base
@@ -63,7 +63,7 @@ export default function Hero() {
                        hover:border-accent/50 hover:text-text-primary transition-all duration-200"
             style={{ fontFamily: 'var(--font-mono)' }}
           >
-            Learn More
+            Learn more
           </a>
         </div>
 

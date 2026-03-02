@@ -61,7 +61,7 @@ body {
   -webkit-font-smoothing: none;
   letter-spacing: 0.03em;
   overflow-x: hidden;
-  text-shadow: 0 0 8px #ff6b0055;
+  text-shadow: 0 0 4px #ff6b0022;
 }
 
 /* NERV uppercase — headers, labels, nav only */
@@ -83,9 +83,9 @@ body::after {
   background: repeating-linear-gradient(
     0deg,
     transparent,
-    transparent 2px,
-    rgba(0, 0, 0, 0.03) 2px,
-    rgba(0, 0, 0, 0.03) 4px
+    transparent 3px,
+    rgba(0, 0, 0, 0.015) 3px,
+    rgba(0, 0, 0, 0.015) 6px
   );
   pointer-events: none;
   z-index: 9999;

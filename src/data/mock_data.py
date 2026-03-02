@@ -13,6 +13,7 @@ from src.data.database import (
     init_schema,
     insert_anomaly,
     insert_osint_event,
+    insert_evidence_packet,
     upsert_wallet,
     insert_case,
 )
@@ -556,6 +557,71 @@ def seed_demo_data(db_path: str = None):
             "evidence_json": json.dumps(evidence),
         }
         insert_case(conn, sentinel_case)
+
+        # Create evidence packet for the case
+        gap_minutes = abs(case_data["trade_before_news_hours"]) * 60 if case_data["trade_before_news_hours"] else None
+        # Compute temporal gap score: higher = more suspicious (trade before signals)
+        if gap_minutes is None:
+            tg_score = 0.5
+        elif case_data["trade_before_news_hours"] and case_data["trade_before_news_hours"] < 0:
+            tg_score = round(min(1.0, 0.6 + min(gap_minutes, 360.0) / 360.0 * 0.4), 3)
+        else:
+            tg_score = round(max(0.05, 0.2 - gap_minutes / 600.0), 3)
+
+        wallet_risk = round(case_data["bss_score"] / 100, 3)
+        corr_score = round(0.3 * wallet_risk + 0.25 * tg_score + 0.2 * (1 if wallet.get("cluster_id") else 0) + 0.25 * (case_data["bss_score"] / 100), 3)
+
+        first_osint_time = (trade_time - timedelta(hours=case_data["osint_signals"][0]["hours_before_trade"])).isoformat() if case_data["osint_signals"] else None
+
+        evidence_packet = {
+            "packet_id": f"PKT-{generate_uuid()}",
+            "case_id": case_id,
+            "event_id": event_id,
+            "market_id": case_data["market_id"],
+            "market_name": case_data["market_name"],
+            "market_slug": case_data["market_id"],
+            "wallet_address": wallet_address,
+            "trade_timestamp": trade_time.isoformat(),
+            "side": "buy",
+            "outcome": "yes",
+            "trade_size": float(case_data["trade_size_usd"]),
+            "trade_price": case_data["price_before"],
+            "wallet_age_hours": float(case_data["wallet_age_days"] * 24),
+            "wallet_trade_count": case_data["wallet_trades"],
+            "wallet_win_rate": 0.6,
+            "wallet_risk_score": wallet_risk,
+            "is_fresh_wallet": 1 if case_data["wallet_age_days"] < 7 else 0,
+            "cluster_id": wallet.get("cluster_id"),
+            "cluster_size": 6 if wallet.get("cluster_id") else 0,
+            "cluster_confidence": 0.85 if wallet.get("cluster_id") else 0.0,
+            "osint_event_id": osint_event_ids[0] if osint_event_ids else None,
+            "osint_source": case_data["osint_signals"][0]["source"].lower().replace(" ", "_") if case_data["osint_signals"] else None,
+            "osint_title": case_data["osint_signals"][0]["headline"] if case_data["osint_signals"] else None,
+            "osint_timestamp": first_osint_time,
+            "temporal_gap_minutes": gap_minutes,
+            "temporal_gap_score": tg_score,
+            "correlation_score": corr_score,
+            "evidence_json": json.dumps({
+                "risk_flags": json.loads(wallet.get("suspicious_flags", "[]")),
+                "wallet_profile": {
+                    "address": wallet_address,
+                    "age_days": case_data["wallet_age_days"],
+                    "trade_count": case_data["wallet_trades"],
+                    "win_rate": 0.6,
+                },
+                "osint_event_count": len(osint_event_ids),
+                "osint_signals_before_trade": len(case_data["osint_signals"]),
+                "temporal_gap_minutes": gap_minutes,
+                "temporal_gap_score": tg_score,
+                "classification": {
+                    "case_id": case_id,
+                    "classification": case_data["classification"],
+                    "bss_score": case_data["bss_score"],
+                    "pes_score": case_data["pes_score"],
+                },
+            }),
+        }
+        insert_evidence_packet(conn, evidence_packet)
 
         print(f"  [{i+1}/{len(DEMO_CASES)}] Created {case_data['classification']} case: {case_data['market_name'][:50]}...")
 
