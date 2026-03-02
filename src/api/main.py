@@ -31,6 +31,7 @@ from src.data.database import (
     get_votes_for_case,
     insert_vote,
     list_evidence_packets,
+    list_osint_events,
 )
 
 logger = logging.getLogger(__name__)
@@ -277,6 +278,29 @@ def list_anomalies(
         )
         items = [_decode_anomaly(dict(row)) for row in cursor.fetchall()]
 
+        return {
+            "count": len(items),
+            "total": total,
+            "limit": limit,
+            "offset": offset,
+            "items": items,
+        }
+    finally:
+        conn.close()
+
+
+@app.get("/api/osint")
+def list_osint(
+    source: Optional[str] = Query(default=None),
+    category: Optional[str] = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=500),
+    offset: int = Query(default=0, ge=0),
+) -> Dict[str, Any]:
+    conn = _connect()
+    try:
+        items, total = list_osint_events(
+            conn, source=source, category=category, limit=limit, offset=offset
+        )
         return {
             "count": len(items),
             "total": total,

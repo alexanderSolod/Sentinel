@@ -389,6 +389,38 @@ def get_osint_events_by_market(
     return [dict(row) for row in cursor.fetchall()]
 
 
+def list_osint_events(
+    conn: sqlite3.Connection,
+    source: Optional[str] = None,
+    category: Optional[str] = None,
+    limit: int = 100,
+    offset: int = 0,
+) -> tuple:
+    """List OSINT events with optional filtering. Returns (items, total)."""
+    cursor = conn.cursor()
+    filters: List[str] = []
+    params: List[Any] = []
+
+    if source:
+        filters.append("source = ?")
+        params.append(source)
+    if category:
+        filters.append("category = ?")
+        params.append(category)
+
+    where = (" WHERE " + " AND ".join(filters)) if filters else ""
+
+    cursor.execute(f"SELECT COUNT(*) FROM osint_events{where}", params)
+    total = int(cursor.fetchone()[0])
+
+    cursor.execute(
+        f"SELECT * FROM osint_events{where} ORDER BY timestamp DESC LIMIT ? OFFSET ?",
+        [*params, limit, offset],
+    )
+    items = [dict(row) for row in cursor.fetchall()]
+    return items, total
+
+
 # ============================================================
 # CRUD Operations for wallet_profiles
 # ============================================================

@@ -7,6 +7,7 @@ import {
   ChevronRight,
   Eye,
   BookOpen,
+  HeartPulse,
 } from 'lucide-react';
 import { useHealth } from '../../api/hooks.ts';
 

@@ -4,6 +4,7 @@ import DashboardLayout from './components/layout/DashboardLayout.tsx';
 import LiveMonitor from './pages/LiveMonitor.tsx';
 import CaseDetail from './pages/CaseDetail.tsx';
 import Arena from './pages/Arena.tsx';
+import SystemHealth from './pages/SystemHealth.tsx';
 
 const SystemReference = lazy(() => import('./pages/SystemReference.tsx'));
 
@@ -16,6 +17,7 @@ export default function App() {
           <Route path="/case/:caseId" element={<CaseDetail />} />
           <Route path="/index" element={<Navigate to="/" replace />} />
           <Route path="/arena" element={<Arena />} />
+          <Route path="/system" element={<SystemHealth />} />
           <Route
             path="/reference"
             element={

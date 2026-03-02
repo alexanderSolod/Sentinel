@@ -6,6 +6,7 @@ import type {
   EvidencePacket,
   HealthResponse,
   MetricsResponse,
+  OsintEvent,
   PaginatedResponse,
   SentinelCase,
   VoteRequest,
@@ -120,13 +121,34 @@ export function useAnomalies(params?: {
   classification?: string;
   limit?: number;
   offset?: number;
+  refreshInterval?: number;
 }) {
   const url = `/api/anomalies${buildQuery({
     classification: params?.classification,
     limit: params?.limit,
     offset: params?.offset,
   })}`;
-  return useApi<PaginatedResponse<Anomaly>>(url);
+  return useApi<PaginatedResponse<Anomaly>>(url, {
+    refreshInterval: params?.refreshInterval,
+  });
+}
+
+export function useOsint(params?: {
+  source?: string;
+  category?: string;
+  limit?: number;
+  offset?: number;
+  refreshInterval?: number;
+}) {
+  const url = `/api/osint${buildQuery({
+    source: params?.source,
+    category: params?.category,
+    limit: params?.limit,
+    offset: params?.offset,
+  })}`;
+  return useApi<PaginatedResponse<OsintEvent>>(url, {
+    refreshInterval: params?.refreshInterval,
+  });
 }
 
 export function useCaseDetail(caseId: string | undefined) {
