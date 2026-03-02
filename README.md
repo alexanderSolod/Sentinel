@@ -2,16 +2,12 @@
 
 **AI-powered surveillance for prediction market integrity**
 
-Built with Mistral AI | [Mistral Worldwide Hackathon 2026](https://worldwide-hackathon.mistral.ai/)
+Built with Mistral AI for the| [Mistral Worldwide Hackathon 2026](https://worldwide-hackathon.mistral.ai/)
 
 ---
 
-## The Problem
-
 In January 2024, an anonymous wallet deposited $60,000 into a freshly created Polymarket account and bet everything on an Iranian military strike — **8 hours before anyone knew it was coming.** The wallet was 3 days old. Zero prior trades. Part of a 6-wallet cluster that all bet the same way. Return: **812%.**
-
 This wasn't speculation. This was insider trading on a prediction market.
-
 Sentinel would have caught it in real time.
 
 ## What Sentinel Does
@@ -27,6 +23,18 @@ Trade at 2:00 AM ──────── 8 hours ──────── News 
    BSS: 94/100 (suspicious)                 PES: 15/100 (unexplainable)
    Classification: INSIDER                   SAR Report generated
 ```
+## The Four Classifications
+
+| Classification | BSS | PES | Description |
+|---------------|-----|-----|-------------|
+| **INSIDER** | High (>70) | Low (<30) | Trade based on material non-public information |
+| **OSINT_EDGE** | Low (<30) | High (>70) | Legitimate research edge from public intelligence |
+| **FAST_REACTOR** | Low (<30) | High (>70) | Quick reaction to breaking news |
+| **SPECULATOR** | Low (<30) | Mid (40-60) | Normal speculation, no timing correlation |
+
+**BSS** = Behavioral Suspicion Score (0-100) &nbsp;|&nbsp; **PES** = Public Explainability Score (0-100)
+
+---
 
 ## Architecture
 
@@ -64,10 +72,10 @@ Trade at 2:00 AM ──────── 8 hours ──────── News 
            │                  │                │
            ▼                  ▼                ▼
   ┌─────────────────────────────────────────────────────────────────────┐
-  │              5-GATE FALSE POSITIVE CASCADE                         │
-  │  Statistical (20%) → RF (25%) → Autoencoder (15%)                 │
-  │  → Game Theory (20%) → Mistral LLM (20%)                         │
-  │  Dismiss < 0.25 ─── Escalate > 0.60                               │
+  │              5-GATE FALSE POSITIVE CASCADE                          │
+  │  Statistical (20%) → RF (25%) → Autoencoder (15%)                   │
+  │  → Game Theory (20%) → Mistral LLM (20%)                            │
+  │  Dismiss < 0.25 ─── Escalate > 0.60                                 │
   └────────────────────────────┬────────────────────────────────────────┘
                                │
            ┌───────────────────┼───────────────────┐
@@ -92,6 +100,19 @@ Trade at 2:00 AM ──────── 8 hours ──────── News 
                     └────────────────────┘
 ```
 
+## Deep Dives
+Each module has its own README with implementation details:
+
+| Module | README | What's covered |
+|--------|--------|----------------|
+| **Classification Pipeline** | [`src/classification/`](src/classification/README.md) | 3-stage AI pipeline, fine-tuning, gold-standard cases, model deployment |
+| **Detection Engine** | [`src/detection/`](src/detection/README.md) | Anomaly detection, wallet profiling, DBSCAN clustering, RF, game theory, 5-gate FP cascade |
+| **OSINT Intelligence** | [`src/osint/`](src/osint/README.md) | 5 data sources, temporal correlation, vector store, RSS aggregation |
+| **Real-time Pipeline** | [`src/pipeline/`](src/pipeline/README.md) | Live trade processing, evidence packets, mock/live modes |
+| **REST API** | [`src/api/`](src/api/README.md) | All endpoints, authentication, request/response shapes |
+| **Fine-tuning Data** | [`data/finetuning/`](data/finetuning/README.md) | Training data format, distribution, gold examples, deployment |
+---
+
 **4 Mistral models in the loop:**
 
 | Model | Role | Latency |
@@ -101,19 +122,7 @@ Trade at 2:00 AM ──────── 8 hours ──────── News 
 | **Mistral Large** | Stage 3 SAR — Generates regulatory-grade Suspicious Activity Reports | ~45s |
 | **Mistral Embed** | OSINT vector store — Semantic search across 150+ news sources via ChromaDB | ~2s |
 
-## The Four Classifications
-
-| Classification | BSS | PES | Description |
-|---------------|-----|-----|-------------|
-| **INSIDER** | High (>70) | Low (<30) | Trade based on material non-public information |
-| **OSINT_EDGE** | Low (<30) | High (>70) | Legitimate research edge from public intelligence |
-| **FAST_REACTOR** | Low (<30) | High (>70) | Quick reaction to breaking news |
-| **SPECULATOR** | Low (<30) | Mid (40-60) | Normal speculation, no timing correlation |
-
-**BSS** = Behavioral Suspicion Score (0-100) &nbsp;|&nbsp; **PES** = Public Explainability Score (0-100)
-
 ---
-
 ## Getting Started
 
 ### Prerequisites
@@ -198,21 +207,6 @@ python main.py monitor --mock 50     # 50 mock trades
 | `python main.py pipeline --mock\|--live\|--backfill` | Run classification pipeline |
 | `python main.py monitor --mock [N]\|--live` | Real-time trade monitoring |
 | `cd ui && npm run dev` | Start React dashboard on :5173 |
-
----
-
-## Deep Dives
-
-Each module has its own README with implementation details:
-
-| Module | README | What's covered |
-|--------|--------|----------------|
-| **Classification Pipeline** | [`src/classification/`](src/classification/README.md) | 3-stage AI pipeline, fine-tuning, gold-standard cases, model deployment |
-| **Detection Engine** | [`src/detection/`](src/detection/README.md) | Anomaly detection, wallet profiling, DBSCAN clustering, RF, game theory, 5-gate FP cascade |
-| **OSINT Intelligence** | [`src/osint/`](src/osint/README.md) | 5 data sources, temporal correlation, vector store, RSS aggregation |
-| **Real-time Pipeline** | [`src/pipeline/`](src/pipeline/README.md) | Live trade processing, evidence packets, mock/live modes |
-| **REST API** | [`src/api/`](src/api/README.md) | All endpoints, authentication, request/response shapes |
-| **Fine-tuning Data** | [`data/finetuning/`](data/finetuning/README.md) | Training data format, distribution, gold examples, deployment |
 
 ---
 
